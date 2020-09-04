@@ -6,6 +6,8 @@
 
 * The protein-protein interactions network for human from [STRING](https://string-db.org/cgi/download.pl?sessionId=VKCYtvc7YJch&species_text=Homo+sapiens)
 
+* All processed multi-omics data for the 33 cancer types can be found on [Zenodo](https://zenodo.org/record/3981464#.X1KBES2B3EY)
+
 ## Dependencies
 
 To install python dependencies run: `pip install -r requirements.txt`
