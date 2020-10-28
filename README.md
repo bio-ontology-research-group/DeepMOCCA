@@ -1,4 +1,4 @@
-# Multi-omics integration and personalized analysis in cancer
+# DeepMOCCA - Deep Multi Omics CanCer Analysis
 
 ## Datasets
 
