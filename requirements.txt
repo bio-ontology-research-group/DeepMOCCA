@@ -83,3 +83,4 @@ wcwidth==0.2.4
 webencodings==0.5.1
 widgetsnbextension==3.5.1
 zipp==3.1.0
+click==7.1.2
