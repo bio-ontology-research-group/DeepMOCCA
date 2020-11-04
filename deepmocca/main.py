@@ -52,59 +52,60 @@ def load_data(in_file):
     g = Graph()
     g.parse("rdf_string.ttl", format="turtle")
     ##############
-    seen={}
-    done={}
-    ei=[[],[]]
-    ii=0
+    seen = {}
+    done = {}
+    ei = [[],[]]
+    ii = 0
     def get_name(raw):
         index=raw.rfind('_')
         return raw[index+1:-1]
+
     for i,j,k in g:
-        sbj=get_name(i.n3())
-        obj=get_name(k.n3())
+        sbj = get_name(i.n3())
+        obj = get_name(k.n3())
         if sbj not in seen:
-            seen[sbj]=ii
-            ii+=1
+            seen[sbj] = ii
+            ii += 1
         if obj not in seen:
-            seen[obj]=ii
-            ii+=1
-        ei[0].append((seen[sbj]))
-        ei[1].append((seen[obj]))
+            seen[obj] = ii
+            ii += 1
+            ei[0].append((seen[sbj]))
+            ei[1].append((seen[obj]))
     for i,j,k in g:
-    sbj=get_name(i.n3())
-    obj=get_name(k.n3())
-    #############
-    # Import a dictionary that maps protiens to their coresponding genes from Ensembl database
+        sbj = get_name(i.n3())
+        obj = get_name(k.n3())
+        #############
+        # Import a dictionary that maps protiens to their coresponding genes from Ensembl database
     import pickle
-    f=open('ens_dic.pkl','rb')
-    dicty=pickle.load(f)
+    f = open('ens_dic.pkl','rb')
+    dicty = pickle.load(f)
     f.close()
-    dic={}
+    dic = {}
     for d in dicty:
-        key=dicty[d]
+        key = dicty[d]
         if key not in dic:
-            dic[key]={}
-        dic[key][d]=1
-    #############
-    f=open(in_file)
-    line=f.readlines()
+            dic[key] = {}
+            dic[key][d] = 1
+            #############
+    f = open(in_file)
+    line = f.readlines()
     f.close()
-    data=[[0,0,0,0,0,0] for j in range(ii+1)]
+    data = [[0,0,0,0,0,0] for j in range(ii+1)]
     for l in line:
-        gene,exp,diffexp,methyl,diffmethyl,cnv,snv=l.split('\t')
-        exp=float(exp)
-        diffexp=float(diffexp)
-        methyl=float(methyl)
-        diffmethyl=float(diffmethyl)
-        cnv=float(cnv)
-        snv=float(snv)
+        gene,exp,diffexp,methyl,diffmethyl,cnv,snv = l.split('\t')
+        exp = float(exp)
+        diffexp = float(diffexp)
+        methyl = float(methyl)
+        diffmethyl = float(diffmethyl)
+        cnv = float(cnv)
+        snv = float(snv)
         if gene in seen:
-            data[seen[gene]][0]=exp
-            data[seen[gene]][1]=diffexp
-            data[seen[gene]][2]=methyl
-            data[seen[gene]][3]=diffmethyl
-            data[seen[gene]][4]=cnv
-            data[seen[gene]][5]=snv
+            data[seen[gene]][0] = exp
+            data[seen[gene]][1] = diffexp
+            data[seen[gene]][2] = methyl
+            data[seen[gene]][3] = diffmethyl
+            data[seen[gene]][4] = cnv
+            data[seen[gene]][5] = snv
     return data
 
 def load_model(model_file):
@@ -115,7 +116,7 @@ def load_model(model_file):
         def __init__(self):
             super(Net, self).__init__()
             self.conv1 = GCNConv(6,64)
-            self.pool1 = SAGPooling(64, ratio=0.70, GNN=GCNConv)
+            self.pool1 = SAGPooling(64, ratio = 0.70, GNN = GCNConv)
             self.conv2 = GCNConv(64,32)
             self.fc1 = nn.Linear(32,8)
 
@@ -129,15 +130,15 @@ def load_model(model_file):
             x = F.relu(self.conv1(x, edge_index))
             x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, None, batch)
             x = F.relu(self.conv2(x, edge_index))
-            b=data.y.shape[0]
-            x=x.view(b,-1)
-#             ct = self.fc2(pt_tensor_cancer_type.to(device))
-#             cs = self.fc3(pt_tensor_cancer_subtype.to(device))
-#             al = self.fc4(pt_tensor_anatomical_location.to(device))
-#             cet = self.fc5(pt_tensor_cell_type.to(device))
-#             concat_tensors = torch.cat([ct, cs, al, cet], dim=0)
+            b = data.y.shape[0]
+            x = x.view(b,-1)
+            #             ct = self.fc2(pt_tensor_cancer_type.to(device))
+            #             cs = self.fc3(pt_tensor_cancer_subtype.to(device))
+            #             al = self.fc4(pt_tensor_anatomical_location.to(device))
+            #             cet = self.fc5(pt_tensor_cell_type.to(device))
+            #             concat_tensors = torch.cat([ct, cs, al, cet], dim = 0)
             x = self.fc1(x)
-#             x = torch.matmul(x, concat_tensors)
+            #             x = torch.matmul(x, concat_tensors)
             return x
         
     model = Net(*args, **kwargs)
