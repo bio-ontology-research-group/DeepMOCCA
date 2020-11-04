@@ -50,6 +50,7 @@ def load_data(in_file):
     """    
     # Import the RDF graph for PPI network
     g = Graph()
+    # TODO: I suggest to move it to data folder and provide it as an argument to the function
     g.parse("rdf_string.ttl", format="turtle")
     ##############
     seen = {}
@@ -77,6 +78,7 @@ def load_data(in_file):
         #############
         # Import a dictionary that maps protiens to their coresponding genes from Ensembl database
     import pickle
+    # TODO: move it to data folder and replace it with an argument variable
     f = open('ens_dic.pkl','rb')
     dicty = pickle.load(f)
     f.close()
