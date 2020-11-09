@@ -12,23 +12,24 @@ import logging
 import torch
 import torch.nn as nn
 from torch_geometric.nn import GCNConv, SAGPooling
+from torch_geometric.data import Data
 from rdflib import Graph
 
 @ck.command()
 @ck.option('--data-root', '-dr', default='data/', help='Data root folder', required=True)
 @ck.option('--in-file', '-if', help='Input file', required=True)
 @ck.option('--model-file', '-mf', default='model.h5', help='Pytorch model file')
-@ck.option('--cancer-type', '-ct', help='Cancer type flag', required=True)
-@ck.option('--anatomical-part', '-ap', help='Anatomical part flag', required=True)
+@ck.option('--cancer-type-flag', '-ct', help='Cancer type flag', required=True)
+@ck.option('--anatomical-part-flag', '-ap', help='Anatomical part flag', required=True)
 @ck.option('--out-file', '-of', default='results.tsv', help='Output result file')
-def main(data_root, in_file, model_file, cancer_type, anatomical_part, out_file):
+def main(data_root, in_file, model_file, cancer_type_flag, anatomical_part_flag, out_file):
     # Check data folder and required files
     try:
         if os.path.exists(data_root):
             in_file = os.path.join(data_root, in_file)
             model_file = os.path.join(data_root, model_file)
             if not os.path.exists(in_file):
-                raise Exception(f'Input file ({go_file}) is missing!')
+                raise Exception(f'Input file ({in_file}) is missing!')
             if not os.path.exists(model_file):
                 raise Exception(f'Model file ({model_file}) is missing!')
         else:
@@ -38,17 +39,18 @@ def main(data_root, in_file, model_file, cancer_type, anatomical_part, out_file)
         sys.exit(1)
 
     # Read input data
-    data = load_data(in_file, rdf_graph, conv_prot, cancer_type, anatomical_part)
+    data = load_data(in_file, cancer_type_flag, anatomical_part_flag)
     # Load GCN model
     model = load_model(model_file)
     # Run model
     output = model(data)
+    print('Done')
     # Write the results to a file
-    print_results(data, output, out_file)
+#     print_results(data, output, out_file)
 
     
 
-def load_data(in_file, rdf_graph, conv_prot, cancer_type, anatomical_part):
+def load_data(in_file, cancer_type_flag, anatomical_part_flag, rdf_graph = 'rdf_string.ttl', conv_prot = 'ens_dic.pkl'):
     """This function load input data and formats it
     """    
     # Import the RDF graph for PPI network
@@ -93,8 +95,8 @@ def load_data(in_file, rdf_graph, conv_prot, cancer_type, anatomical_part):
     cancer_subtype = [0] * 25
     anatomical_location = [0] * 52
     cell_type = [0] * 10
-    t = cancer_type
-    a = anatomical_part
+    t = int(cancer_type_flag)
+    a = int(anatomical_part_flag)
     cancer_type[t-1] = 1
     anatomical_location [a-1] = 1
     for i in [4,7,4,22]:
@@ -128,7 +130,7 @@ def load_data(in_file, rdf_graph, conv_prot, cancer_type, anatomical_part):
     dataset = []
     edge = torch.tensor(ei,dtype=torch.long)
     x = torch.tensor(data,dtype=torch.float)
-    label = clin
+    label = 563
     dataset.append(Data(x = x,edge_index = edge,y = torch.tensor([label])))
     return dataset
 
@@ -136,7 +138,7 @@ def load_model(model_file):
     """The function for loading a pytorch model
     """
     # Define the model
-    class Net(nn.Module):
+    class MyNet(nn.Module):
         def __init__(self):
             super(Net, self).__init__()
             self.conv1 = GCNConv(6,64)
@@ -149,11 +151,12 @@ def load_model(model_file):
             self.fc4 = nn.Linear(52,1)
             self.fc5 = nn.Linear(10,1)
 
-        def forward(self, data):
-            x, edge_index, batch = data.x, data.edge_index, data.batch
+        def forward(self, dataA):
+            x, edge_index, batch = dataA.x, dataA.edge_index, dataA.batch
             x = F.relu(self.conv1(x, edge_index))
             x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, None, batch)
             x = F.relu(self.conv2(x, edge_index))
+            x = gmp(x, batch)
             b=data.y.shape[0]
             x=x.view(b,-1)
             ct = self.fc2(pt_tensor_cancer_type.to(device))
@@ -169,7 +172,7 @@ def load_model(model_file):
             x = torch.tensor([x])
             return x
         
-    model = Net(*args, **kwargs)
+    model = MyNet()
     model.load_state_dict(torch.load(model_file))
     model.eval()
 
