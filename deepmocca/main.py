@@ -130,7 +130,7 @@ def load_data(in_file, cancer_type_flag, anatomical_part_flag, rdf_graph = 'rdf_
     dataset = []
     edge = torch.tensor(ei,dtype=torch.long)
     x = torch.tensor(data,dtype=torch.float)
-    label = 563
+    label = clin
     dataset.append(Data(x = x,edge_index = edge,y = torch.tensor([label])))
     return dataset
 
