@@ -95,12 +95,12 @@ def load_data(in_file, rdf_graph = 'rdf_string.ttl', conv_prot = 'ens_dic.pkl'):
     data = [[0,0,0,0,0,0] for j in range(ii+1)]
     for l in line:
         gene, exp, diffexp, methyl, diffmethyl, cnv, snv = l.split('\t')
-        exp = float(exp)
-        diffexp = float(diffexp)
-        methyl = float(methyl)
-        diffmethyl = float(diffmethyl)
-        cnv = float(cnv)
-        snv = float(snv)
+        exp = np.log(float(exp))
+        diffexp = np.log(float(diffexp))
+        methyl = np.log(float(methyl))
+        diffmethyl = np.log(float(diffmethyl))
+        cnv = np.log(float(cnv))
+        snv = np.log(float(snv))
         if gene in seen:
             data[seen[gene]][0] = exp
             data[seen[gene]][1] = diffexp
