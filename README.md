@@ -10,20 +10,17 @@
 
 To install python dependencies run: `pip install -r requirements.txt`
 
-## Prediction of cancer patients survival time workflow
+## Installation
 
-- Download all the provided files from this repository
-```
-git clone https://github.com/bio-ontology-research-group/Cancer_SurvivalPrediction.git
-```
-## Graph neural networks predict survival time from personal omics data across subtypes
-![alt text](img/combined_model_workflow.png)
+`pip install deepmocca`
 
-We developed a subtypes-based model that integrates information from encoded subgroups of cancer subtypes, anatomical parts, and the cell types of origin besides the cancer types and given different multi-omics data for cancer patients fall within these subgroups.
+## Running
+
+* Download all the files in `data.tar.gz` and place them into data folder
+* `deepmocca -dr <path_to_data_folder> -if <input_fasta_filename> -ct <cancer_type> -ap <anatomical_location>`
 
 ### Output
 The model will output:
-- A file contains average attention-based ranks for the genes over all samples for the selected cancer type.
 - A file contains the time to live for all samples for the selected cancer type.
 - A file contains a vector representation for each patient retrieved through the model learning process.
 
