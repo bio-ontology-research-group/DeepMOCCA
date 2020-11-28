@@ -13,6 +13,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GCNConv, SAGPooling
+from torch_geometric.nn import global_max_pool as gmp
 from torch_geometric.data import Data
 from rdflib import Graph
 
@@ -95,12 +96,13 @@ def load_data(in_file, rdf_graph = 'rdf_string.ttl', conv_prot = 'ens_dic.pkl'):
     data = [[0,0,0,0,0,0] for j in range(ii+1)]
     for l in line:
         gene, exp, diffexp, methyl, diffmethyl, cnv, snv = l.split('\t')
-        exp = np.log(float(exp))
-        diffexp = np.log(float(diffexp))
-        methyl = np.log(float(methyl))
-        diffmethyl = np.log(float(diffmethyl))
-        cnv = np.log(float(cnv))
-        snv = np.log(float(snv))
+        # Normalize the features
+        exp = float(exp)
+        diffexp = float(diffexp)
+        methyl = float(methyl)
+        diffmethyl = float(diffmethyl)
+        cnv = float(cnv)
+        snv = float(snv)
         if gene in seen:
             data[seen[gene]][0] = exp
             data[seen[gene]][1] = diffexp
@@ -121,14 +123,146 @@ def load_model(model_file, data, cancer_type_flag, anatomical_part_flag):
     cancer_subtype = [0] * 25
     anatomical_location = [0] * 52
     cell_type = [0] * 10
+    if cancer_type_flag == '1':
+        for i in [0,12,7,14,4,1,6,2,3]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '2':
+        for i in [4]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '3':
+        for i in [5,4,14,6]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '4':
+        for i in [6,4,12,7]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '5':
+        for i in [4]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '6':
+        for i in [6,4,12,7]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '7':
+        for i in [8]:
+            cancer_subtype[i] = 1
+        cell_type[1] = 1
+    elif cancer_type_flag == '8':
+        for i in [6,4,12]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '9':
+        for i in [9]:
+            cancer_subtype[i] = 1
+        cell_type[2] = 1
+    elif cancer_type_flag == '10':
+        for i in [6]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '11':
+        for i in [4]:
+            cancer_subtype[i] = 1
+        cell_type[3] = 1
+    elif cancer_type_flag == '12':
+        for i in [4]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '13':
+        for i in [4]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '14':
+        for i in [10]:
+            cancer_subtype[i] = 1
+        cell_type[4] = 1
+    elif cancer_type_flag == '15':
+        for i in [9]:
+            cancer_subtype[i] = 1
+        cell_type[2] = 1
+    elif cancer_type_flag == '16':
+        for i in [4]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '17':
+        for i in [4,11,12]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '18':
+        for i in [6]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '19':
+        for i in [13]:
+            cancer_subtype[i] = 1
+        cell_type[5] = 1
+    elif cancer_type_flag == '20':
+        for i in [12]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '21':
+        for i in [0,4,12,14]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '22':
+        for i in [15]:
+            cancer_subtype[i] = 1
+        cell_type[6] = 1
+    elif cancer_type_flag == '23':
+        for i in [4,0,12]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '24':
+        for i in [4,12]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '25':
+        for i in [16,17,18,19,20]:
+            cancer_subtype[i] = 1
+        cell_type[7] = 1
+    elif cancer_type_flag == '26':
+        for i in [20]:
+            cancer_subtype[i] = 1
+        cell_type[8] = 1
+    elif cancer_type_flag == '27':
+        for i in [4,12]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '28':
+        for i in [22]:
+            cancer_subtype[i] = 1
+        cell_type[9] = 1
+    elif cancer_type_flag == '29':
+        for i in [4,14]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '30':
+        for i in [23]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '31':
+        for i in [4,12,14]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '32':
+        for i in [24]:
+            cancer_subtype[i] = 1
+        cell_type[0] = 1
+    elif cancer_type_flag == '33':
+        for i in [21]:
+            cancer_subtype[i] = 1
+        cell_type[8] = 1
+    else:
+        print('!!The Cancer Type You Entered is NOT Correct!!')
+            
     t = int(cancer_type_flag)
     a = int(anatomical_part_flag)
     cancer_type[t-1] = 1
     anatomical_location [a-1] = 1
-    for i in [4,7,4,22]:
-        cancer_subtype[i] = 1
-    for j in [0]:
-        cell_type[j] = 1
+
     pt_tensor_cancer_type = torch.FloatTensor(cancer_type)
     pt_tensor_cancer_subtype = torch.FloatTensor(cancer_subtype)
     pt_tensor_anatomical_location = torch.FloatTensor(anatomical_location)
@@ -141,7 +275,7 @@ def load_model(model_file, data, cancer_type_flag, anatomical_part_flag):
             self.conv1 = GCNConv(6,64)
             self.pool1 = SAGPooling(64, ratio=0.70, GNN=GCNConv)
             self.conv2 = GCNConv(64,32)
-            self.fc1 = nn.Linear(32,8)
+            self.fc1 = nn.Linear(32,1)
 
             self.fc2 = nn.Linear(33,1)
             self.fc3 = nn.Linear(25,1)
@@ -153,6 +287,7 @@ def load_model(model_file, data, cancer_type_flag, anatomical_part_flag):
             x = F.relu(self.conv1(x, edge_index))
             x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, None, None, None)
             x = F.relu(self.conv2(x, edge_index))
+            x = gmp(x,batch)
             x=x.view(1,-1)
             ct = self.fc2(pt_tensor_cancer_type)
             cs = self.fc3(pt_tensor_cancer_subtype)
@@ -172,7 +307,7 @@ def load_model(model_file, data, cancer_type_flag, anatomical_part_flag):
     model.eval()
     prediction = model(data)
     with open('results_rep.tsv', 'w') as f:
-        for item in model.conv2.weight.data:
+        for item in model.fc1.weight.data:
             f.write(str(item.float()) + '\n')
     return prediction
 
@@ -183,6 +318,8 @@ def print_results(dataset, results, out_file):
         for item in results:
             f.write(str(item.item()) + '\n')
             
+
+    print('***DONE***' + '\n' + '***The Results Files have been Generated***')
     
 
 if __name__ == '__main__':
