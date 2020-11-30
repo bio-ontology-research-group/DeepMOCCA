@@ -8,7 +8,9 @@
 
 ## Dependencies
 
-To install python dependencies run: `pip install -r requirements.txt`
+* To install python dependencies run: `pip install -r requirements.txt`
+
+* Note: the `torch` and `torch geometric cuda` need to have the same version, we suggest to follow the instructions [Here](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
 
 ## Installation
 
@@ -19,10 +21,19 @@ To install python dependencies run: `pip install -r requirements.txt`
 * Download all the files in `data.tar.gz` and place them into data folder
 * `deepmocca -dr <path_to_data_folder> -if <input_fasta_filename> -ct <cancer_type> -ap <anatomical_location>`
 
-### Output
+#### Output
 The model will output:
 - A file contains the time to live for all samples for the selected cancer type.
 - A file contains a vector representation for each patient retrieved through the model learning process.
+
+## Scripts
+
+* `preprocess_gene_expression.py` - This script is used to preprocess and normlize gene expression data.
+* `preprocess_methylation.py` - This script is used to preprocess the DNA methylation data.
+* `preprocess_CNV.py` - This script is used to preprocess the copy number variation (CNV) data.
+* `preprocess_SNV.py` - This script is used to preprocess the single-nucleotide variation (SNV) data.
+* `deepmocca_training.py` - This script is used to train and save the trained model.
+* `prepare_input_file.py` - This script is used to prepare the input matrix for the tool.
 
 ## Final notes
 
