@@ -20,6 +20,20 @@
 
 * Download all the files in `data.tar.gz` and place them into data folder
 * `deepmocca -dr <path_to_data_folder> -if <input_fasta_filename> -ct <cancer_type> -ap <anatomical_location>`
+* Run `deepmocca --help` to display a description for the parameters:
+```
+Usage: deepmocca [OPTIONS]
+
+Options:
+  -dr, --data-root TEXT           Data root folder  [required]
+  -if, --in-file TEXT             Input file  [required]
+  -mf, --model-file TEXT          Pytorch model file
+  -ct, --cancer-type-flag TEXT    Cancer type flag  [required]
+  -ap, --anatomical-part-flag TEXT
+                                  Anatomical part flag  [required]
+  -of, --out-file TEXT            Output result file
+  --help                          Show this message and exit.
+  ```
 
 #### Output
 The model will output:
@@ -31,9 +45,8 @@ The model will output:
 * `preprocess_gene_expression.py` - This script is used to preprocess and normlize gene expression data.
 * `preprocess_methylation.py` - This script is used to preprocess the DNA methylation data.
 * `preprocess_CNV.py` - This script is used to preprocess the copy number variation (CNV) data.
-* `preprocess_SNV.py` - This script is used to preprocess the single-nucleotide variation (SNV) data.
+* `process_vcf.sh` and `process_vcf.py` - These scripts are used to preprocess the single-nucleotide variation (SNV) data.
 * `deepmocca_training.py` - This script is used to train and save the trained model.
-* `prepare_input_file.py` - This script is used to prepare the input matrix for the tool.
 
 ## Final notes
 
