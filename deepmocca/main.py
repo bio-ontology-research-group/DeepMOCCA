@@ -28,7 +28,6 @@ def main(data_root, in_file, model_file, cancer_type_flag, anatomical_part_flag,
     # Check data folder and required files
     try:
         if os.path.exists(data_root):
-            in_file = os.path.join(data_root, in_file)
             model_file = os.path.join(data_root, model_file)
             if not os.path.exists(in_file):
                 raise Exception(f'Input file ({in_file}) is missing!')
@@ -41,7 +40,7 @@ def main(data_root, in_file, model_file, cancer_type_flag, anatomical_part_flag,
         sys.exit(1)
 
     # Read input data
-    data = load_data(in_file)
+    data = load_data(data_root, in_file)
     # Load and Run GCN model
     output = load_model(model_file, data, cancer_type_flag, anatomical_part_flag)
     # Write the results to a file
@@ -49,12 +48,12 @@ def main(data_root, in_file, model_file, cancer_type_flag, anatomical_part_flag,
 
     
 
-def load_data(in_file, rdf_graph = 'rdf_string.ttl', conv_prot = 'ens_dic.pkl'):
+def load_data(data_root, in_file, rdf_graph = 'rdf_string.ttl', conv_prot = 'ens_dic.pkl'):
     """This function load input data and formats it
     """    
     # Import the RDF graph for PPI network
     g = Graph()
-    g.parse(rdf_graph, format="turtle")
+    g.parse(os.path.join(data_root, rdf_graph), format="turtle")
     ##############
     seen = {}
     done = {}
@@ -80,7 +79,7 @@ def load_data(in_file, rdf_graph = 'rdf_string.ttl', conv_prot = 'ens_dic.pkl'):
         obj = get_name(k.n3())
     #############
     # Import a dictionary that maps protiens to their coresponding genes from Ensembl database
-    f = open(conv_prot,'rb')
+    f = open(os.path.join(data_root, conv_prot),'rb')
     dicty = pickle.load(f)
     f.close()
     dic = {}
