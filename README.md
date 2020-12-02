@@ -18,7 +18,7 @@
 
 ## Running
 
-* Download all the files in `data.tar.gz` and place them into data folder
+* Download all the files in [data.tar.gz](https://bio2vec.cbrc.kaust.edu.sa/data/deepmocca/data.tar.gz) and place them into data folder
 * `deepmocca -dr <path_to_data_folder> -if <input_fasta_filename> -ct <cancer_type> -ap <anatomical_location>`
 * Run `deepmocca --help` to display a description for the parameters:
 ```

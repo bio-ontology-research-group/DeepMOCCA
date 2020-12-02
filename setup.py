@@ -15,18 +15,20 @@ try:
 except ImportError:
     tagger = egg_info_cmd.egg_info
 
+setup_requires = ["torch < 1.8", ]
 install_requires = [
-    "click < 8", "torch < 1.6", "pandas < 2",
-    "numpy < 2.0", "scipy < 1.5" 
+    "torch < 1.8", "click < 8", "pandas < 2", 
+    "numpy", "scipy", "torch-scatter", "torch-sparse",
+    "torch-cluster", "torch-spline-conv", "torch-geometric",
 ]
 
 needs_pytest = {"pytest", "test", "ptr"}.intersection(sys.argv)
 pytest_runner = ["pytest < 6", "pytest-runner < 5"] if needs_pytest else []
 
 setup(
-    name="deepgoplus",
+    name="deepmocca",
     version="1.0.0",
-    description="DeepGOPlus function predictor",
+    description="DeepMOCCA",
     long_description=open(README).read(),
     long_description_content_type="text/markdown",
     author="Sara Althubaiti",
@@ -37,7 +39,7 @@ setup(
     package_data={"deepmocca": [],},
     install_requires=install_requires,
     extras_require={},
-    setup_requires=[] + pytest_runner,
+    setup_requires=setup_requires + pytest_runner,
     tests_require=["pytest<5"],
     entry_points={
         "console_scripts": [
