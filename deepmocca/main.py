@@ -294,27 +294,34 @@ def load_model(model_file, data, cancer_type_flag, anatomical_part_flag):
             cet = self.fc5(pt_tensor_cell_type)
             concat_tensors = torch.cat([ct, cs, al, cet], dim=0)
             x = self.fc1(x)
+            features = x
             concat_tensors = torch.unsqueeze(concat_tensors, 0)
             x = torch.matmul(x, concat_tensors)
             x = x.squeeze(1)
             x = torch.mean(x)
             x = torch.tensor([x])
-            return x
+            return x, features
         
     model = MyNet()
     model.load_state_dict(torch.load(model_file))
     model.eval()
-    prediction = model(data)
-    with open('results_rep.tsv', 'w') as f:
-        for item in model.fc1.weight.data:
-            f.write(str(item.float()) + '\n')
-    return prediction
+    prediction, features = model(data)
+
+    # TODO: This does not seem to be correct
+    # I added features variable in your model which would be the correct
+    # representation for a given sample
+    # with open('results_rep.tsv', 'w') as f:
+    #     for item in model.fc1.weight.data:
+    #         f.write(str(item.float()) + '\n')
+    return prediction, features
 
 def print_results(dataset, results, out_file):
     """Write results to a file
     """
+    prediction, features = results
+    # TODO: also print the features here
     with open(out_file, 'w') as f:
-        for item in results:
+        for item in prediction:
             f.write(str(item.item()) + '\n')
             
 
