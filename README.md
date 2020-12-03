@@ -130,8 +130,10 @@ Options:
  
 #### Output
 The model will output:
-- A file contains the time to live for all samples for the selected cancer type.
-- A file contains a vector representation for each patient retrieved through the model learning process.
+- A tab separated file contains:
+    * Sample_ID
+    * Time to live for a sample being testes for the selected cancer type and anatomical part
+    * A vector representation for each the sample retrieved through the model learning process
 
 ## Scripts
 
