@@ -1,5 +1,10 @@
 # DeepMOCCA - Deep Multi Omics CanCer Analysis
 
+DeepMOCCA is a method that automatically learn representations of the multi-scale activities and interactions within a cell from multi-omics data associated with individual cancer samples by predicting the survival time.
+
+Our tool takes as input data derived from individual sample, in particular the absolute gene expression, differential expression, absolute methylation, differential methylation, type of the copy number variants, and pathogenicity scores for the set of germline and somatic variants. As well as, the cancer type and anatomical location. We use this information to determine the cell type of origin.
+
+
 ## Datasets
 
 * All multi-omics data for the 33 cancer types (i.e. gene expression, DNA methylation, copy number variation (CNV), single nucleotide variation (SNV) and clinical data) have been downloded from [The Cancer Genome Atlas (TCGA)](http://cancergenome.nih.gov) via their [Data Transfer Tool Client](https://gdc.cancer.gov/access-data/gdc-data-transfer-tool)
