@@ -44,7 +44,7 @@ def main(data_root, in_file, model_file, cancer_type_flag, anatomical_part_flag,
     # Load and Run GCN model
     output = load_model(model_file, data, cancer_type_flag, anatomical_part_flag)
     # Write the results to a file
-    print_results(data, output, out_file)
+    print_results(data, output, out_file, in_file)
 
     
 
@@ -307,25 +307,22 @@ def load_model(model_file, data, cancer_type_flag, anatomical_part_flag):
     model.eval()
     prediction, features = model(data)
 
-    # TODO: This does not seem to be correct
-    # I added features variable in your model which would be the correct
-    # representation for a given sample
-    # with open('results_rep.tsv', 'w') as f:
-    #     for item in model.fc1.weight.data:
-    #         f.write(str(item.float()) + '\n')
     return prediction, features
 
-def print_results(dataset, results, out_file):
+def print_results(dataset, results, out_file, in_file):
     """Write results to a file
     """
     prediction, features = results
-    # TODO: also print the features here
-    with open(out_file, 'w') as f:
+    file_name = os.path.splitext(in_file)[0]+'_'+out_file
+    
+    with open(file_name, 'w') as f:
+        f.write(os.path.splitext(in_file)[0].split("/")[1] + '\t')
         for item in prediction:
-            f.write(str(item.item()) + '\n')
+            f.write(str(item.item()) + '\t')
+        f.write(str(features.data.cpu().numpy()) + '\n')
             
 
-    print('***DONE***' + '\n' + '***The Results Files have been Generated***')
+    print('***DONE***' + '\n' + '***The Results File have been Generated***')
     
 
 if __name__ == '__main__':
