@@ -284,17 +284,19 @@ def load_model(model_file, data, cancer_type_flag, anatomical_part_flag):
         def forward(self, data):
             x, edge_index = data.x, data.edge_index
             x = F.relu(self.conv1(x, edge_index))
+            print(np.max(x.view(1, -1).data.cpu().numpy()))
             x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, None, None, None)
             x = F.relu(self.conv2(x, edge_index))
+            print(np.max(x.view(1, -1).data.cpu().numpy()))
             x = gmp(x,batch)
             x=x.view(1,-1)
+            features = x
             ct = self.fc2(pt_tensor_cancer_type)
             cs = self.fc3(pt_tensor_cancer_subtype)
             al = self.fc4(pt_tensor_anatomical_location)
             cet = self.fc5(pt_tensor_cell_type)
             concat_tensors = torch.cat([ct, cs, al, cet], dim=0)
             x = self.fc1(x)
-            features = x
             concat_tensors = torch.unsqueeze(concat_tensors, 0)
             x = torch.matmul(x, concat_tensors)
             x = x.squeeze(1)
@@ -313,16 +315,17 @@ def print_results(dataset, results, out_file, in_file):
     """Write results to a file
     """
     prediction, features = results
-    file_name = os.path.splitext(in_file)[0]+'_'+out_file
-    
+    file_name = os.path.splitext(in_file)[0] + '_' + out_file
+    features = features.data.cpu().numpy()
+    print(features.shape)
     with open(file_name, 'w') as f:
-        f.write(os.path.splitext(in_file)[0].split("/")[1] + '\t')
+        f.write(os.path.splitext(in_file)[0] + '\t')
         for item in prediction:
             f.write(str(item.item()) + '\t')
-        f.write(str(features.data.cpu().numpy()) + '\n')
+        f.write(str(features) + '\n')
             
 
-    print('***DONE***' + '\n' + '***The Results File have been Generated***')
+    print(f'***DONE***\n***The results have been written to {file_name}***')
     
 
 if __name__ == '__main__':
