@@ -48,35 +48,16 @@ def main(data_root, in_file, model_file, cancer_type_flag, anatomical_part_flag,
 
     
 
-def load_data(data_root, in_file, rdf_graph = 'rdf_string.ttl', conv_prot = 'ens_dic.pkl'):
+def load_data(data_root, in_file, proteins_nodes = 'seen.pkl', edges_indeces = 'ei.pkl', conv_prot = 'ens_dic.pkl'):
     """This function load input data and formats it
     """    
-    # Import the RDF graph for PPI network
-    g = Graph()
-    g.parse(os.path.join(data_root, rdf_graph), format="turtle")
-    ##############
-    seen = {}
-    done = {}
-    ei = [[],[]]
-    ii = 0
-    def get_name(raw):
-        index=raw.rfind('_')
-        return raw[index+1:-1]
-
-    for i,j,k in g:
-        sbj = get_name(i.n3())
-        obj = get_name(k.n3())
-        if sbj not in seen:
-            seen[sbj] = ii
-            ii += 1
-        if obj not in seen:
-            seen[obj] = ii
-            ii += 1
-            ei[0].append((seen[sbj]))
-            ei[1].append((seen[obj]))
-    for i,j,k in g:
-        sbj = get_name(i.n3())
-        obj = get_name(k.n3())
+    # Import PPI network
+    f=open(os.path.join(data_root, proteins_nodes),'rb')
+    seen=pickle.load(f)
+    f.close()
+    f=open(os.path.join(data_root, edges_indeces),'rb')
+    ei=pickle.load(f)
+    f.close()
     #############
     # Import a dictionary that maps protiens to their coresponding genes from Ensembl database
     f = open(os.path.join(data_root, conv_prot),'rb')
@@ -92,7 +73,7 @@ def load_data(data_root, in_file, rdf_graph = 'rdf_string.ttl', conv_prot = 'ens
     f = open(in_file)
     line = f.readlines()
     f.close()
-    data = [[0,0,0,0,0,0] for j in range(ii+1)]
+    data = [[0,0,0,0,0,0] for j in range(len(seen)+1)]
     for l in line:
         gene, exp, diffexp, methyl, diffmethyl, cnv, snv = l.split('\t')
         # Normalize the features
