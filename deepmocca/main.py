@@ -102,13 +102,15 @@ def load_data(data_root, in_file, rdf_graph = 'rdf_string.ttl', conv_prot = 'ens
         diffmethyl = float(diffmethyl)
         cnv = float(cnv)
         snv = float(snv)
-        if gene in seen:
-            data[seen[gene]][0] = exp
-            data[seen[gene]][1] = diffexp
-            data[seen[gene]][2] = methyl
-            data[seen[gene]][3] = diffmethyl
-            data[seen[gene]][4] = cnv
-            data[seen[gene]][5] = snv
+        if gene in dic:
+            for p in dic[gene]:
+                if p in seen:
+                    data[seen[p]][0] = exp
+                    data[seen[p]][1] = diffexp
+                    data[seen[p]][2] = methyl
+                    data[seen[p]][3] = diffmethyl
+                    data[seen[p]][4] = cnv
+                    data[seen[p]][5] = snv
     edge = torch.tensor(ei,dtype=torch.long)
     x = torch.tensor(data,dtype=torch.float)
     dataset = Data(x = x,edge_index = edge)
@@ -284,13 +286,11 @@ def load_model(model_file, data, cancer_type_flag, anatomical_part_flag):
         def forward(self, data):
             x, edge_index = data.x, data.edge_index
             x = F.relu(self.conv1(x, edge_index))
-            print(np.max(x.view(1, -1).data.cpu().numpy()))
             x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, None, None, None)
             x = F.relu(self.conv2(x, edge_index))
-            print(np.max(x.view(1, -1).data.cpu().numpy()))
             x = gmp(x,batch)
-            x=x.view(1,-1)
             features = x
+            x=x.view(1,-1)
             ct = self.fc2(pt_tensor_cancer_type)
             cs = self.fc3(pt_tensor_cancer_subtype)
             al = self.fc4(pt_tensor_anatomical_location)
@@ -317,7 +317,6 @@ def print_results(dataset, results, out_file, in_file):
     prediction, features = results
     file_name = os.path.splitext(in_file)[0] + '_' + out_file
     features = features.data.cpu().numpy()
-    print(features.shape)
     with open(file_name, 'w') as f:
         f.write(os.path.splitext(in_file)[0] + '\t')
         for item in prediction:
