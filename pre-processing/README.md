@@ -35,3 +35,21 @@ DeepMOCCA is a tool for integrating and analyzing omics data with respect to bac
 - Run `preprocess_CNV.py` which process the `*.focal_score_by_genes.txt` which contain the CNV values for each gene per patient to generate separate file for each patient.
 
 ###  Single Nucleotide Variation
+
+- Run `process_vcf.sh` on the annotated VCF files by the FATHMM tool which would filter and assign each gene a set of pathogenicity scores for its variants.
+
+## Usage:
+
+To run the training model `deepmocca_training.py`, the user need to provide:
+
+- `rdf_string.ttl`: The RDF graph for PPI network.
+
+- `ens_dic.pkl`: A dictionary that maps protiens to their coresponding genes by Ensembl database.
+
+- `prot_names.txt`: A mapping file used to build a dictionary from ENSG -- ENST (for DNA Methylation data).
+
+- `samples_'+can_types[i]*+'.tsv`: A file that contain patients ID with their coressponding 7 differnt files names (i.e. files names for gene expression, differential gene expression, dna methylation, differential dna methylation, VCF, CNV and the clinical data).
+
+- Specifiy the cancer type and the anatomical location.
+
+- The path to the folders where omics data located.
