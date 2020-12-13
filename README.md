@@ -135,7 +135,7 @@ Options:
  
 #### Output
 The model will output:
-- A tab separated file contains:
+- A tab separated file has the same name as input file with **_results** extension which contains:
     * Sample_ID
     * Time to live for a sample being testes for the selected cancer type and anatomical part
     * A vector representation for each the sample retrieved through the model learning process
