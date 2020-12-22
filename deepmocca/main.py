@@ -301,8 +301,10 @@ def print_results(dataset, results, out_file, in_file):
     with open(file_name, 'w') as f:
         f.write(os.path.splitext(in_file)[0] + '\t')
         for item in prediction:
-            f.write(str(item.item()) + '\t')
-        f.write(str(features) + '\n')
+            f.write(str(item.item()))
+        for item in features.flatten():
+            f.write('\t' + str(item))
+        f.write('\n')
             
 
     print(f'***DONE***\n***The results have been written to {file_name}***')
