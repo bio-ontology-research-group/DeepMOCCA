@@ -163,7 +163,7 @@ def main(cancer_type, anatomical_location):
         for l in tqdm(lines):
             try:
                 l = l.split('\t')
-                clinical_file = 'cancer_types/TCGA-' + can_types[i] + '/clinical/' + l[2]
+                clinical_file = 'cancer_types/TCGA-' + can_types[i] + '/clinical/' + l[6]
                 surv_file = 'cancer_types/TCGA-' + can_types[i] + '/clinical1/' + l[2]
                 myth_file = 'cancer_types/TCGA-' + can_types[i] + '/myth/' + l[3]
                 diff_myth_file = 'cancer_types/TCGA-' + can_types[i] + '/diff_myth/' + l[1]
