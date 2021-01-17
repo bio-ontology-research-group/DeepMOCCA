@@ -17,6 +17,7 @@ from torch_geometric.nn import GCNConv, SAGEConv, GraphConv, SAGPooling
 import click as ck
 import gzip
 import pickle
+import sys
 
 CANCER_SUBTYPES = [
     [0,12,7,14,4,1,6,2,3],
@@ -144,7 +145,7 @@ def main(cancer_type, anatomical_location):
 
     # Build a dictionary from ENSG -- ENST
     d = {}
-    with open('prot_names1.txt') as f:
+    with open('data1/prot_names1.txt') as f:
         for line in f:
             tok = line.split()
             d[tok[1]] = tok[0]
@@ -164,11 +165,11 @@ def main(cancer_type, anatomical_location):
             try:
                 l = l.split('\t')
                 clinical_file = 'cancer_types/TCGA-' + can_types[i] + '/clinical/' + l[6]
-                surv_file = 'cancer_types/TCGA-' + can_types[i] + '/clinical1/' + l[2]
+                surv_file = 'data1/file/surv/' + l[2]
                 myth_file = 'cancer_types/TCGA-' + can_types[i] + '/myth/' + l[3]
-                diff_myth_file = 'cancer_types/TCGA-' + can_types[i] + '/diff_myth/' + l[1]
-                exp_norm_file = 'cancer_types/TCGA-' + can_types[i] + '/exp_norm/col/' + l[-1]
-                diff_exp_norm_file = 'cancer_types/TCGA-' + can_types[i] + '/diff_exp_norm/col/' + l[0]
+                diff_myth_file = 'data1/file/diff_myth/' + l[1]
+                exp_norm_file = 'cancer_types/TCGA-' + can_types[i] + '/exp_count/col/' + l[-1]
+                diff_exp_norm_file = 'data1/file/diff_exp/' + l[0]
                 cnv_file = 'cancer_types/TCGA-' + can_types[i] + '/cnv/' + l[4] + '.txt'
                 vcf_file = 'cancer_types/TCGA-' + can_types[i] + '/vcf/output/' + 'OutputAnnoFile_' + l[5] + '.hg38_multianno.txt.dat'
                 # Check if all 6 files are exist for a patient (that's because for some patients, their survival time not reported)
@@ -252,7 +253,7 @@ def myth_data(fname):
     f=open(fname)
     line=f.readlines()
     f.close()
-    output=[[0,0,0,0,0,0] for j in range(ii+1)]
+    output=[[0,0,0,0,0,0] for j in range(len(seen)+1)]
     for l in line:
         temp=[]
         trans,myth=l.split('\t')
