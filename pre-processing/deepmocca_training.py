@@ -188,11 +188,11 @@ def main(cancer_type, anatomical_location):
                 content = f.read().strip()
                 f.close()
                 suv_time.append(content)
-                temp_myth=myth_data(myth_file)
+                temp_myth=myth_data(myth_file, seen, d)
                 feat_vecs.append(
-                    exp_data(
+                    get_data(
                         exp_norm_file, diff_exp_norm_file, diff_myth_file,
-                        cnv_file, vcf_file, temp_myth))
+                        cnv_file, vcf_file, temp_myth, seen))
             except Exception as e:
                 print(e)
                 sys.exit(1)
@@ -249,7 +249,7 @@ def main(cancer_type, anatomical_location):
             rmse = math.sqrt(mse)
 
 # Import and pre-process methylation data
-def myth_data(fname):
+def myth_data(fname, seen, d):
     f=open(fname)
     line=f.readlines()
     f.close()
@@ -272,7 +272,7 @@ def myth_data(fname):
 
 # Import gene expression files and Pre-process them
 
-def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output):
+def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen):
     f=gzip.open(expname,'rt')
     line=f.readlines()
     f.close()
