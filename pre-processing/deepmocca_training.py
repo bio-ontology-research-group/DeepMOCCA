@@ -145,7 +145,7 @@ def main(cancer_type, anatomical_location):
 
     # Build a dictionary from ENSG -- ENST
     d = {}
-    with open('prot_names1.txt') as f:
+    with open('data1/prot_names1.txt') as f:
         for line in f:
             tok = line.split()
             d[tok[1]] = tok[0]
@@ -165,7 +165,7 @@ def main(cancer_type, anatomical_location):
             try:
                 l = l.split('\t')
                 clinical_file = 'cancer_types/TCGA-' + can_types[i] + '/clinical/' + l[6]
-                surv_file = 'surv/' + l[2]
+                surv_file = 'data1/file/surv/' + l[2]
                 myth_file = 'cancer_types/TCGA-' + can_types[i] + '/myth/' + l[3]
                 diff_myth_file = 'data1/file/diff_myth/' + l[1]
                 exp_norm_file = 'cancer_types/TCGA-' + can_types[i] + '/exp_count/col/' + l[-1]
@@ -196,8 +196,18 @@ def main(cancer_type, anatomical_location):
             except Exception as e:
                 print(e)
                 sys.exit(1)
-                                                                                                                                                                                                                                                                                                                                                   
-    label = [float(i) for i in clin]
+    clinn = []
+    for i in clin:
+        clinn.append(i.replace("-",""))
+    clinnn = []
+    for i in clinn:
+        if i != "":
+            clinnn.append(i)
+        else:
+            i = "0"
+            clinnn.append(i)
+                                     
+    label = [float(i) for i in clinnn]
 
     # Train by batch
     dataset=[]
@@ -206,10 +216,11 @@ def main(cancer_type, anatomical_location):
     for e in range(len(feat_vecs)):
         x=torch.tensor(feat_vecs[e],dtype=torch.float)
         labell = label[e]
-        dataset.append(Data(x=x,edge_index=edge,y=torch.tensor([labell]),event=torch.tensor(suv_time[e])))
+        # event=torch.tensor(suv_time[e])
+        dataset.append(Data(x=x,edge_index=edge,y=torch.tensor([labell])))
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = CoxPH(MyNet().to(device), tt.optim.Adam(0.001))
+    model = CoxPH(MyNet(pt_tensor_cancer_type, pt_tensor_cancer_subtype, pt_tensor_anatomical_location, pt_tensor_cell_type).to(device), tt.optim.Adam(0.001))
 
     # Each time test on a specific cancer type
     total_cancers = ["TCGA-BRCA"]
@@ -238,7 +249,7 @@ def main(cancer_type, anatomical_location):
         callbacks = [tt.callbacks.EarlyStopping()]
 
         trained_model = model.fit(
-            train_dataset[x], train_dataset[y, event], batch_size=3, epochs=100,
+            train_dataset, train_dataset.y, batch_size=3, epochs=100,
             callbacks=callbacks, val_data=val_dataset, val_batch_size=3)
 
         # Compute the evaluation measurements
