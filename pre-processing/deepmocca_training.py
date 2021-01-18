@@ -145,7 +145,7 @@ def main(cancer_type, anatomical_location):
 
     # Build a dictionary from ENSG -- ENST
     d = {}
-    with open('data1/prot_names1.txt') as f:
+    with open('prot_names1.txt') as f:
         for line in f:
             tok = line.split()
             d[tok[1]] = tok[0]
@@ -165,7 +165,7 @@ def main(cancer_type, anatomical_location):
             try:
                 l = l.split('\t')
                 clinical_file = 'cancer_types/TCGA-' + can_types[i] + '/clinical/' + l[6]
-                surv_file = 'data1/file/surv/' + l[2]
+                surv_file = 'surv/' + l[2]
                 myth_file = 'cancer_types/TCGA-' + can_types[i] + '/myth/' + l[3]
                 diff_myth_file = 'data1/file/diff_myth/' + l[1]
                 exp_norm_file = 'cancer_types/TCGA-' + can_types[i] + '/exp_count/col/' + l[-1]
@@ -188,11 +188,11 @@ def main(cancer_type, anatomical_location):
                 content = f.read().strip()
                 f.close()
                 suv_time.append(content)
-                temp_myth=myth_data(myth_file, seen, d)
+                temp_myth=myth_data(myth_file, seen, d, dic)
                 feat_vecs.append(
                     get_data(
                         exp_norm_file, diff_exp_norm_file, diff_myth_file,
-                        cnv_file, vcf_file, temp_myth, seen))
+                        cnv_file, vcf_file, temp_myth, seen, dic))
             except Exception as e:
                 print(e)
                 sys.exit(1)
@@ -249,7 +249,7 @@ def main(cancer_type, anatomical_location):
             rmse = math.sqrt(mse)
 
 # Import and pre-process methylation data
-def myth_data(fname, seen, d):
+def myth_data(fname, seen, d, dic):
     f=open(fname)
     line=f.readlines()
     f.close()
@@ -266,13 +266,15 @@ def myth_data(fname, seen, d):
             x=x[:index]
             if x in d:
                 gen = d[x]
-            if gen in seen:
-                output[seen[gen]][0]=myth
+            if gen in dic:
+                for p in dic[gen]:
+                    if p in seen:
+                        output[seen[p]][0]=myth
     return output
 
 # Import gene expression files and Pre-process them
 
-def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen):
+def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen, dic):
     f=gzip.open(expname,'rt')
     line=f.readlines()
     f.close()
@@ -284,11 +286,13 @@ def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen):
             index=len(gene)
         gene=gene[:index]
         exp=float(exp)
-        if gene in seen:
-            output[seen[gene]][1]=exp
+        if gene in dic:
+            for p in dic[gene]:
+                if p in seen:
+                    output[seen[p]][1]=exp
 
     # Import differential gene expression files and Pre-process them             
-    f=open(diffexpname)
+    f=gzip.open(diffexpname,'rt')
     line=f.readlines()
     f.close()    
     for l in line:
@@ -298,9 +302,11 @@ def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen):
         if index<1:
             index=len(gene)
         gene=gene[:index]
-        diffexp=int(diffexp)
-        if gene in seen:
-            output[seen[gene]][2]=diffexp
+        diffexp=float(diffexp)
+        if gene in dic:
+            for p in dic[gene]:
+                if p in seen:
+                    output[seen[p]][2]=diffexp
 
     # Import differential methylation files and Pre-process them             
     f=open(diffmethyname)
@@ -313,10 +319,12 @@ def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen):
         if index<1:
             index=len(gene)
         gene=gene[:index]
-        diffmethy=int(diffmethy)
-        if gene in seen:
-            output[seen[gene]][3]=diffmethy
-    # Import CNV files and Pre-process them             
+        diffmethy=float(diffmethy)
+        if gene in dic:
+            for p in dic[gene]:
+                if p in seen:
+                    output[seen[p]][3]=diffmethy
+    # Import CNV files and Pre-process them
     f=open(cnvname)
     line=f.readlines()
     f.close()    
@@ -327,9 +335,11 @@ def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen):
         if index<1:
             index=len(gene)
         gene=gene[:index]
-        cnv=int(cnv)
-        if gene in seen:
-            output[seen[gene]][4]=cnv                        
+        cnv=float(cnv)
+        if gene in dic:
+            for p in dic[gene]:
+                if p in seen:
+                    output[seen[p]][4]=cnv                        
     # Import VCF files and Pre-process them            
     f=open(vcfname)
     line=f.readlines()
@@ -337,10 +347,10 @@ def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen):
     for l in line:
         gene,score=l.split('\t')
         score=float(score)
-        if gene in seen:
-            print(gene + '\t' + output, file=f)
-            print('\n', file=f)
-            output[seen[gene]][5]=score
+        if gene in dic:
+            for p in dic[gene]:
+                if p in seen:
+                    output[seen[p]][5]=score
 
     return output
 
