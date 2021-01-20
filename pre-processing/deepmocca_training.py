@@ -101,9 +101,10 @@ class MyNet(nn.Module):
 
 
 @ck.command()
+@ck.option('--data-root', '-dr', default='data/', help='Root folder with all training data')
 @ck.option('--cancer-type', '-ct', default=0, help='Cancer type index (0-32)')
 @ck.option('--anatomical-location', '-al', default=0, help='Anatomical location index (0-51)')
-def main(cancer_type, anatomical_location):
+def main(data_root, cancer_type, anatomical_location):
 
     # Import the RDF graph for PPI network
     f = open('seen.pkl','rb')
@@ -161,17 +162,17 @@ def main(cancer_type, anatomical_location):
         f.close()
         lines = lines[1:]
         count = 0
-        for l in tqdm(lines):
+        for l in tqdm(lines[:9]):
             try:
                 l = l.split('\t')
-                clinical_file = 'cancer_types/TCGA-' + can_types[i] + '/clinical/' + l[6]
-                surv_file = 'data1/file/surv/' + l[2]
-                myth_file = 'cancer_types/TCGA-' + can_types[i] + '/myth/' + l[3]
-                diff_myth_file = 'data1/file/diff_myth/' + l[1]
-                exp_norm_file = 'cancer_types/TCGA-' + can_types[i] + '/exp_count/col/' + l[-1]
-                diff_exp_norm_file = 'data1/file/diff_exp/' + l[0]
-                cnv_file = 'cancer_types/TCGA-' + can_types[i] + '/cnv/' + l[4] + '.txt'
-                vcf_file = 'cancer_types/TCGA-' + can_types[i] + '/vcf/output/' + 'OutputAnnoFile_' + l[5] + '.hg38_multianno.txt.dat'
+                clinical_file = data_root + 'clinical/' + l[6]
+                surv_file = data_root + 'surv/' + l[2]
+                myth_file = data_root + 'myth/' + l[3]
+                diff_myth_file = data_root + 'diff_myth/' + l[1]
+                exp_norm_file = data_root + 'exp_count/' + l[-1]
+                diff_exp_norm_file = data_root + 'diff_exp/' + l[0]
+                cnv_file = data_root + 'cnv/' + l[4] + '.txt'
+                vcf_file = data_root + 'vcf/' + 'OutputAnnoFile_' + l[5] + '.hg38_multianno.txt.dat'
                 # Check if all 6 files are exist for a patient (that's because for some patients, their survival time not reported)
                 all_files = [
                     clinical_file, surv_file, myth_file, diff_myth_file,
