@@ -14,6 +14,7 @@ from pycox.models import CoxPH
 from pycox.evaluation import EvalSurv
 from torch_geometric.data import Data, DataLoader
 from torch_geometric.nn import GCNConv, SAGEConv, GraphConv, SAGPooling
+from torch_geometric.nn import global_max_pool as gmp
 import click as ck
 import gzip
 import pickle
@@ -62,8 +63,9 @@ CELL_TYPES = [
 
 
 class MyNet(nn.Module):
-    def __init__(self, pt_tensor_cancer_type, pt_tensor_cancer_subtype, pt_tensor_anatomical_location, pt_tensor_cell_type):
+    def __init__(self, edge_index, pt_tensor_cancer_type, pt_tensor_cancer_subtype, pt_tensor_anatomical_location, pt_tensor_cell_type):
         super(MyNet, self).__init__()
+        self.edge_index = edge_index
         self.pt_tensor_cancer_type = pt_tensor_cancer_type
         self.pt_tensor_cancer_subtype = pt_tensor_cancer_subtype
         self.pt_tensor_anatomical_location = pt_tensor_anatomical_location
@@ -80,23 +82,31 @@ class MyNet(nn.Module):
         
 
     def forward(self, data):
-        x, edge_index, batch = data.x, data.edge_index, data.batch
-        x = F.relu(self.conv1(x, edge_index))
-        x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, None, batch)
+        x = data
+        batch_size = data.shape[0]
+        input_size = data.shape[1]
+        x = data.view(-1, data.shape[-1])
+        batches = []
+        for i in range(batch_size):
+            tr = torch.ones(input_size, dtype=torch.int64) * i
+            batches.append(tr)
+        batch = torch.cat(batches, 0).to(device)
+        x = F.relu(self.conv1(x, self.edge_index))
+        x, edge_index, _, batch, perm, score = self.pool1(x, self.edge_index, None, batch)
         x = F.relu(self.conv2(x, edge_index))
-        b=data.y.shape[0]
-        x=x.view(b,-1)
-        ct = self.fc2(self.pt_tensor_cancer_type.to(device))
-        cs = self.fc3(self.pt_tensor_cancer_subtype.to(device))
-        al = self.fc4(self.pt_tensor_anatomical_location.to(device))
-        cet = self.fc5(self.pt_tensor_cell_type.to(device))
+        x = gmp(x, batch)
+        x = x.view(batch_size, -1)
+        ct = self.fc2(self.pt_tensor_cancer_type)
+        cs = self.fc3(self.pt_tensor_cancer_subtype)
+        al = self.fc4(self.pt_tensor_anatomical_location)
+        cet = self.fc5(self.pt_tensor_cell_type)
         concat_tensors = torch.cat([ct, cs, al, cet], dim=0)
         x = self.fc1(x)
         concat_tensors = torch.unsqueeze(concat_tensors, 0)
         x = torch.matmul(x, concat_tensors)
         x = x.squeeze(1)
-        x = torch.mean(x)
-        x = torch.tensor([x])
+        x = torch.mean(x).view(batch_size, -1)
+        # x = torch.tensor([x])
         return x
 
 
@@ -115,6 +125,10 @@ def main(data_root, cancer_type, anatomical_location):
     f = open('ei.pkl','rb')
     ei = pickle.load(f)
     f.close()
+    
+    global device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cpu')
 
     cancer_type_vector = [0] * 33
     cancer_type_vector[cancer_type] = 1
@@ -128,10 +142,11 @@ def main(data_root, cancer_type, anatomical_location):
     cell_type_vector = [0] * 10
     cell_type_vector[CELL_TYPES[cancer_type]] = 1
 
-    pt_tensor_cancer_type = torch.FloatTensor(cancer_type_vector)
-    pt_tensor_cancer_subtype = torch.FloatTensor(cancer_subtype_vector)
-    pt_tensor_anatomical_location = torch.FloatTensor(anatomical_location_vector)
-    pt_tensor_cell_type = torch.FloatTensor(cell_type_vector)
+    pt_tensor_cancer_type = torch.FloatTensor(cancer_type_vector).to(device)
+    pt_tensor_cancer_subtype = torch.FloatTensor(cancer_subtype_vector).to(device)
+    pt_tensor_anatomical_location = torch.FloatTensor(anatomical_location_vector).to(device)
+    pt_tensor_cell_type = torch.FloatTensor(cell_type_vector).to(device)
+    edge_index = torch.LongTensor(ei).to(device)
     
     # Import a dictionary that maps protiens to their coresponding genes by Ensembl database
     f = open('ens_dic.pkl','rb')
@@ -197,61 +212,61 @@ def main(data_root, cancer_type, anatomical_location):
             except Exception as e:
                 print(e)
                 sys.exit(1)
-    clinn = []
-    for i in clin:
-        clinn.append(i.replace("-",""))
-    clinnn = []
-    for i in clinn:
-        if i != "":
-            clinnn.append(i)
+    labels_days = []
+    labels_surv = []
+    for days, surv in zip(clin, suv_time):
+        if days.replace("-", "") != "":
+            days = float(days)
         else:
-            i = "0"
-            clinnn.append(i)
-                                     
-    label = [float(i) for i in clinnn]
+            days = 0.0
+        labels_days.append(float(days))
+        labels_surv.append(float(surv))
 
     # Train by batch
-    dataset=[]
-    edge=torch.tensor(ei,dtype=torch.long)
-    i=0
-    for e in range(len(feat_vecs)):
-        x=torch.tensor(feat_vecs[e],dtype=torch.float)
-        labell = label[e]
-        # event=torch.tensor(suv_time[e])
-        dataset.append(Data(x=x,edge_index=edge,y=torch.tensor([labell])))
-
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = CoxPH(MyNet(pt_tensor_cancer_type, pt_tensor_cancer_subtype, pt_tensor_anatomical_location, pt_tensor_cell_type).to(device), tt.optim.Adam(0.001))
+    dataset = np.array(feat_vecs, dtype=np.float32)
+    labels_days = np.array(labels_days)
+    labels_surv = np.array(labels_surv)
+    model = CoxPH(MyNet(
+        edge_index,
+        pt_tensor_cancer_type, pt_tensor_cancer_subtype,
+        pt_tensor_anatomical_location,
+        pt_tensor_cell_type).to(device), tt.optim.Adam(0.001))
 
     # Each time test on a specific cancer type
     total_cancers = ["TCGA-BRCA"]
     for i in range(len(total_cancers)):
-        test_set = [d for t, d in zip(total_cancers, dataset) if t == total_cancers[i]]
-        train_set = [d for t, d in zip(total_cancers, dataset) if t != total_cancers[i]]
+        # test_set = [d for t, d in zip(total_cancers, dataset) if t == total_cancers[i]]
+        # train_set = [d for t, d in zip(total_cancers, dataset) if t != total_cancers[i]]
 
         # Split 70% from all 32 cancers and test on 15% of a specific one
-        train_size = len(train_set)
-        train_indices = list(range(train_size))
-        np.random.shuffle(train_indices)
+        index = np.arange(len(dataset))
+        train_size = int(len(dataset) * 0.8)
+        val_size = int(len(dataset) * 0.1)
+        np.random.shuffle(index)
         
-        test_size = len(test_set)
-        test_indices = list(range(test_size))
-        np.random.shuffle(test_indices)
-        test_split_index = int(np.floor(0.5 * test_size))
-
-        train_idx = train_indices 
-        val_idx = test_indices[:test_split_index]
-        test_idx = test_indices[test_split_index:]
-
-        train_dataset = SubsetRandomSampler(train_idx)
-        val_dataset = SubsetRandomSampler(val_idx)
-        test_dataset = SubsetRandomSampler(test_idx)
-
+        train_idx = index[:train_size]
+        val_idx = index[train_size: (train_size + val_size)]
+        test_idx = index[train_size + val_size:]
+        
+        train_data = dataset[train_idx]
+        train_labels_days = labels_days[train_idx]
+        train_labels_surv = labels_surv[train_idx]
+        train_labels = (train_labels_days, train_labels_surv)
+        
+        val_data = dataset[val_idx]
+        val_labels_days = labels_days[val_idx]
+        val_labels_surv = labels_surv[val_idx]
+        test_data = dataset[test_idx]
+        test_labels_days = labels_days[test_idx]
+        test_labels_surv = labels_surv[test_idx]
+        val_labels = (val_labels_days, val_labels_surv)
+        
         callbacks = [tt.callbacks.EarlyStopping()]
 
         trained_model = model.fit(
-            train_dataset, train_dataset.y, batch_size=3, epochs=100,
-            callbacks=callbacks, val_data=val_dataset, val_batch_size=3)
+            train_data, train_labels, batch_size=1, epochs=100,
+            callbacks=callbacks, verbose=True, val_data=(val_data, val_labels),
+            val_batch_size=1)
 
         # Compute the evaluation measurements
         for t in test_dataset:
