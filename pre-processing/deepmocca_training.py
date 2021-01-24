@@ -19,6 +19,7 @@ import click as ck
 import gzip
 import pickle
 import sys
+import matplotlib.pyplot as plt
 
 CANCER_SUBTYPES = [
     [0,12,7,14,4,1,6,2,3],
@@ -63,29 +64,22 @@ CELL_TYPES = [
 
 
 class MyNet(nn.Module):
-    def __init__(self, edge_index, pt_tensor_cancer_type, pt_tensor_cancer_subtype, pt_tensor_anatomical_location, pt_tensor_cell_type):
+    def __init__(self, edge_index):
         super(MyNet, self).__init__()
         self.edge_index = edge_index
-        self.pt_tensor_cancer_type = pt_tensor_cancer_type
-        self.pt_tensor_cancer_subtype = pt_tensor_cancer_subtype
-        self.pt_tensor_anatomical_location = pt_tensor_anatomical_location
-        self.pt_tensor_cell_type = pt_tensor_cell_type
         self.conv1 = GCNConv(6,64)
         self.pool1 = SAGPooling(64, ratio=0.70, GNN=GCNConv)
         self.conv2 = GCNConv(64,32)
         self.fc1 = nn.Linear(32,1)
 
-        self.fc2 = nn.Linear(33,1)
-        self.fc3 = nn.Linear(25,1)
-        self.fc4 = nn.Linear(52,1)
-        self.fc5 = nn.Linear(10,1)
-        
 
     def forward(self, data):
-        x = data
         batch_size = data.shape[0]
-        input_size = data.shape[1]
-        x = data.view(-1, data.shape[-1])
+        x = data[:, :103116]
+        metadata = data[:, 103116:]
+        input_size = 17186
+        print(x.shape)
+        x = x.reshape(-1, 6)
         batches = []
         for i in range(batch_size):
             tr = torch.ones(input_size, dtype=torch.int64) * i
@@ -96,18 +90,9 @@ class MyNet(nn.Module):
         x = F.relu(self.conv2(x, edge_index))
         x = gmp(x, batch)
         x = x.view(batch_size, -1)
-        ct = self.fc2(self.pt_tensor_cancer_type)
-        cs = self.fc3(self.pt_tensor_cancer_subtype)
-        al = self.fc4(self.pt_tensor_anatomical_location)
-        cet = self.fc5(self.pt_tensor_cell_type)
-        concat_tensors = torch.cat([ct, cs, al, cet], dim=0)
+        # x = self.fc1(torch.cat([x, metadata], 1))
         x = self.fc1(x)
-        concat_tensors = torch.unsqueeze(concat_tensors, 0)
-        x = torch.matmul(x, concat_tensors)
-        x=x.view(batch_size,-1)
-        # x = x.squeeze(1)
-        # x = torch.mean(x).view(batch_size, -1)
-        # x = torch.tensor([x])
+        print(x.shape)
         return x
 
 
@@ -131,16 +116,16 @@ def main(data_root, cancer_type, anatomical_location):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
 
-    cancer_type_vector = [0] * 33
+    cancer_type_vector = np.zeros((33,), dtype=np.float32)
     cancer_type_vector[cancer_type] = 1
     
-    cancer_subtype_vector = [0] * 25
+    cancer_subtype_vector = np.zeros((25,), dtype=np.float32)
     for i in CANCER_SUBTYPES[cancer_type]:
         cancer_subtype_vector[i] = 1
     
-    anatomical_location_vector = [0] * 52
+    anatomical_location_vector = np.zeros((52,), dtype=np.float32)
     anatomical_location_vector[anatomical_location] = 1
-    cell_type_vector = [0] * 10
+    cell_type_vector = np.zeros((10,), dtype=np.float32)
     cell_type_vector[CELL_TYPES[cancer_type]] = 1
 
     pt_tensor_cancer_type = torch.FloatTensor(cancer_type_vector).to(device)
@@ -178,41 +163,46 @@ def main(data_root, cancer_type, anatomical_location):
         f.close()
         lines = lines[1:]
         count = 0
+        feat_vecs = np.zeros((len(lines[:11]), 17186 * 6 + 120), dtype=np.float32)
+        i = 0
         for l in tqdm(lines[:11]):
-            try:
-                l = l.split('\t')
-                clinical_file = data_root + 'clinical/' + l[6]
-                surv_file = data_root + 'surv/' + l[2]
-                myth_file = data_root + 'myth/' + l[3]
-                diff_myth_file = data_root + 'diff_myth/' + l[1]
-                exp_norm_file = data_root + 'exp_count/' + l[-1]
-                diff_exp_norm_file = data_root + 'diff_exp/' + l[0]
-                cnv_file = data_root + 'cnv/' + l[4] + '.txt'
-                vcf_file = data_root + 'vcf/' + 'OutputAnnoFile_' + l[5] + '.hg38_multianno.txt.dat'
-                # Check if all 6 files are exist for a patient (that's because for some patients, their survival time not reported)
-                all_files = [
-                    clinical_file, surv_file, myth_file, diff_myth_file,
-                    exp_norm_file, diff_exp_norm_file, cnv_file, vcf_file]
-                for fname in all_files:
-                    if not os.path.exists(fname):
-                        print('File ' + fname + ' does not exist!')
-                        sys.exit(1)
-                f = open(clinical_file)
-                content = f.read().strip()
-                f.close()
-                clin.append(content)
-                f = open(surv_file)
-                content = f.read().strip()
-                f.close()
-                suv_time.append(content)
-                temp_myth=myth_data(myth_file, seen, d, dic)
-                feat_vecs.append(
-                    get_data(
-                        exp_norm_file, diff_exp_norm_file, diff_myth_file,
-                        cnv_file, vcf_file, temp_myth, seen, dic))
-            except Exception as e:
-                print(e)
-                sys.exit(1)
+            l = l.split('\t')
+            clinical_file = data_root + 'clinical/' + l[6]
+            surv_file = data_root + 'surv/' + l[2]
+            myth_file = data_root + 'myth/' + l[3]
+            diff_myth_file = data_root + 'diff_myth/' + l[1]
+            exp_norm_file = data_root + 'exp_count/' + l[-1]
+            diff_exp_norm_file = data_root + 'diff_exp/' + l[0]
+            cnv_file = data_root + 'cnv/' + l[4] + '.txt'
+            vcf_file = data_root + 'vcf/' + 'OutputAnnoFile_' + l[5] + '.hg38_multianno.txt.dat'
+            # Check if all 6 files are exist for a patient (that's because for some patients, their survival time not reported)
+            all_files = [
+                clinical_file, surv_file, myth_file, diff_myth_file,
+                exp_norm_file, diff_exp_norm_file, cnv_file, vcf_file]
+            for fname in all_files:
+                if not os.path.exists(fname):
+                    print('File ' + fname + ' does not exist!')
+                    sys.exit(1)
+            f = open(clinical_file)
+            content = f.read().strip()
+            f.close()
+            clin.append(content)
+            f = open(surv_file)
+            content = f.read().strip()
+            f.close()
+            suv_time.append(content)
+            temp_myth=myth_data(myth_file, seen, d, dic)
+            vec = np.array(
+                get_data(
+                    exp_norm_file, diff_exp_norm_file, diff_myth_file,
+                    cnv_file, vcf_file, temp_myth, seen, dic), dtype=np.float32)
+            vec = vec.flatten()
+            vec = np.concatenate([
+                vec, cancer_type_vector, cancer_subtype_vector,
+                anatomical_location_vector, cell_type_vector])
+            feat_vecs[i, :] = vec
+            i += 1
+
     labels_days = []
     labels_surv = []
     for days, surv in zip(clin, suv_time):
@@ -224,14 +214,12 @@ def main(data_root, cancer_type, anatomical_location):
         labels_surv.append(float(surv))
 
     # Train by batch
-    dataset = np.array(feat_vecs, dtype=np.float32)
+    dataset = feat_vecs
+    print(dataset.shape)
     labels_days = np.array(labels_days)
     labels_surv = np.array(labels_surv)
     model = CoxPH(MyNet(
-        edge_index,
-        pt_tensor_cancer_type, pt_tensor_cancer_subtype,
-        pt_tensor_anatomical_location,
-        pt_tensor_cell_type).to(device), tt.optim.Adam(0.001))
+        edge_index).to(device), tt.optim.Adam(0.001))
 
     # Each time test on a specific cancer type
     total_cancers = ["TCGA-BRCA"]
@@ -263,17 +251,23 @@ def main(data_root, cancer_type, anatomical_location):
         val_labels = (val_labels_days, val_labels_surv)
         
         callbacks = [tt.callbacks.EarlyStopping()]
-
-        trained_model = model.fit(
-            train_data, train_labels, batch_size=1, epochs=100,
-            callbacks=callbacks, verbose=True, val_data=(val_data, val_labels),
-            val_batch_size=1)
-
+        batch_size = 1
+        epochs = 2
+        val = (val_data, val_labels)
+        log = model.fit(
+            train_data, train_labels, batch_size, epochs, callbacks, True,
+            val_data=val,
+            val_batch_size=batch_size)
+        log.plot()
+        plt.show()
+        # print(model.partial_log_likelihood(*val).mean())
+        train = train_data, train_labels
         # Compute the evaluation measurements
-        _ = model.compute_baseline_hazards()
+        model.compute_baseline_hazards(*train)
         surv = model.predict_surv_df(test_data)
+        print(surv)
         ev = EvalSurv(surv, test_labels_days, test_labels_surv)
-        ev.concordance_td()
+        print(ev.concordance_td())
         
 #         for t in test_dataset:
 #             predicted = model.predict_surv_df(t[x])
