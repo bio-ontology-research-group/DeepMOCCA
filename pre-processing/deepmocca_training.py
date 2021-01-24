@@ -178,7 +178,7 @@ def main(data_root, cancer_type, anatomical_location):
         f.close()
         lines = lines[1:]
         count = 0
-        for l in tqdm(lines[:9]):
+        for l in tqdm(lines[:11]):
             try:
                 l = l.split('\t')
                 clinical_file = data_root + 'clinical/' + l[6]
@@ -270,11 +270,16 @@ def main(data_root, cancer_type, anatomical_location):
             val_batch_size=1)
 
         # Compute the evaluation measurements
-        for t in test_dataset:
-            predicted = model.predict_surv_df(t[x])
-            c_index = EvalSurv(predicted, t[y],t[event]).concordance_td()
-            mse = mean_squared_error(t[y], predicted)
-            rmse = math.sqrt(mse)
+        _ = model.compute_baseline_hazards()
+        surv = model.predict_surv_df(test_data)
+        ev = EvalSurv(surv, test_labels_days, test_labels_surv)
+        ev.concordance_td()
+        
+#         for t in test_dataset:
+#             predicted = model.predict_surv_df(t[x])
+#             c_index = EvalSurv(predicted, t[y],t[event]).concordance_td()
+#             mse = mean_squared_error(t[y], predicted)
+#             rmse = math.sqrt(mse)
 
 # Import and pre-process methylation data
 def myth_data(fname, seen, d, dic):
