@@ -104,8 +104,9 @@ class MyNet(nn.Module):
         x = self.fc1(x)
         concat_tensors = torch.unsqueeze(concat_tensors, 0)
         x = torch.matmul(x, concat_tensors)
-        x = x.squeeze(1)
-        x = torch.mean(x).view(batch_size, -1)
+        x=x.view(batch_size,-1)
+        # x = x.squeeze(1)
+        # x = torch.mean(x).view(batch_size, -1)
         # x = torch.tensor([x])
         return x
 
