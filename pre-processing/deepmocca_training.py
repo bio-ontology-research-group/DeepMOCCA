@@ -70,7 +70,8 @@ class MyNet(nn.Module):
         self.conv1 = GCNConv(6,64)
         self.pool1 = SAGPooling(64, ratio=0.70, GNN=GCNConv)
         self.conv2 = GCNConv(64,32)
-        self.fc1 = nn.Linear(32,1)
+        self.fc1 = nn.Linear(64,1)
+        self.fc2 = nn.Linear(120, 32)
 
 
     def forward(self, data):
@@ -90,8 +91,8 @@ class MyNet(nn.Module):
         x = F.relu(self.conv2(x, edge_index))
         x = gmp(x, batch)
         x = x.view(batch_size, -1)
-        # x = self.fc1(torch.cat([x, metadata], 1))
-        x = self.fc1(x)
+        metadata = self.fc2(metadata)
+        x = self.fc1(torch.cat([x, metadata], 1))
         print(x.shape)
         return x
 
