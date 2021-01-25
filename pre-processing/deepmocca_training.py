@@ -72,7 +72,8 @@ class MyNet(nn.Module):
         self.conv2 = GCNConv(64,32)
         self.fc1 = nn.Linear(64,1)
         self.fc2 = nn.Linear(120, 32)
-
+        self.sigmoid = nn.Sigmoid()
+        
 
     def forward(self, data):
         batch_size = data.shape[0]
@@ -93,7 +94,7 @@ class MyNet(nn.Module):
         x = x.view(batch_size, -1)
         metadata = self.fc2(metadata)
         x = self.fc1(torch.cat([x, metadata], 1))
-        print(x.shape)
+        x = self.sigmoid(x)
         return x
 
 
