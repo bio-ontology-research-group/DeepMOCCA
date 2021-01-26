@@ -10,6 +10,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.optim import lr_scheduler
 from torch.utils.data.sampler import SubsetRandomSampler
+from sklearn.preprocessing import MinMaxScaler
 from pycox.models import CoxPH
 from pycox.evaluation import EvalSurv
 from torch_geometric.data import Data, DataLoader
@@ -70,17 +71,16 @@ class MyNet(nn.Module):
         self.conv1 = GCNConv(6,64)
         self.pool1 = SAGPooling(64, ratio=0.70, GNN=GCNConv)
         self.conv2 = GCNConv(64,32)
-        self.fc1 = nn.Linear(64,1)
-        self.fc2 = nn.Linear(120, 32)
+        self.fc1 = nn.Linear(32,1)
         self.sigmoid = nn.Sigmoid()
-        
+        self.fc2 = nn.Linear(120, 32)
+        self.test = nn.Linear(68744, 1)
 
     def forward(self, data):
         batch_size = data.shape[0]
         x = data[:, :103116]
         metadata = data[:, 103116:]
         input_size = 17186
-        print(x.shape)
         x = x.reshape(-1, 6)
         batches = []
         for i in range(batch_size):
@@ -92,8 +92,10 @@ class MyNet(nn.Module):
         x = F.relu(self.conv2(x, edge_index))
         x = gmp(x, batch)
         x = x.view(batch_size, -1)
-        metadata = self.fc2(metadata)
-        x = self.fc1(torch.cat([x, metadata], 1))
+#         metadata = self.fc2(metadata)
+#         x = self.fc1(torch.cat([x, metadata], 1))
+#         x = self.test(data)
+        x = self.fc1(x)
         x = self.sigmoid(x)
         return x
 
@@ -157,71 +159,73 @@ def main(data_root, cancer_type, anatomical_location):
     clin = [] # for clinical data (i.e. number of days to survive, days to death for dead patients and days to last followup for alive patients)
     feat_vecs = [] # list of lists ([[patient1],[patient2],.....[patientN]]) -- [patientX] = [gene_expression_value, diff_gene_expression_value, methylation_value, diff_methylation_value, VCF_value, CNV_value]
     suv_time = [] # list that include wheather a patient is alive or dead (i.e. 0 for dead and 1 for alive)
-    can_types = ["BRCA"]
+    can_types = ["BRCA_v2"]
+    #data_root = '/ibex/scratch/projects/c2014/sara/'
     for i in range(len(can_types)):
         # file that contain patients ID with their coressponding 6 differnt files names (i.e. files names for gene_expression, diff_gene_expression, methylation, diff_methylation, VCF and CNV)
-        f = open(can_types[i] + '.tsv')
+        f = open(can_types[i] + '.txt')
         lines = f.read().splitlines()
         f.close()
         lines = lines[1:]
         count = 0
-        feat_vecs = np.zeros((len(lines[:11]), 17186 * 6 + 120), dtype=np.float32)
+        feat_vecs = np.zeros((len(lines), 17186 * 6), dtype=np.float32)
         i = 0
-        for l in tqdm(lines[:11]):
+        for l in tqdm(lines):
             l = l.split('\t')
-            clinical_file = data_root + 'clinical/' + l[6]
-            surv_file = data_root + 'surv/' + l[2]
-            myth_file = data_root + 'myth/' + l[3]
-            diff_myth_file = data_root + 'diff_myth/' + l[1]
-            exp_norm_file = data_root + 'exp_count/' + l[-1]
-            diff_exp_norm_file = data_root + 'diff_exp/' + l[0]
-            cnv_file = data_root + 'cnv/' + l[4] + '.txt'
-            vcf_file = data_root + 'vcf/' + 'OutputAnnoFile_' + l[5] + '.hg38_multianno.txt.dat'
+            clinical_file = l[6]
+            surv_file = l[2]
+            myth_file = 'myth/' + l[3]
+            diff_myth_file = 'diff_myth/' + l[1]
+            exp_norm_file = 'exp_count/' + l[-1]
+            diff_exp_norm_file = 'diff_exp/' + l[0]
+            cnv_file = 'cnv/' + l[4] + '.txt'
+            vcf_file = 'vcf/' + 'OutputAnnoFile_' + l[5] + '.hg38_multianno.txt.dat'
             # Check if all 6 files are exist for a patient (that's because for some patients, their survival time not reported)
             all_files = [
-                clinical_file, surv_file, myth_file, diff_myth_file,
-                exp_norm_file, diff_exp_norm_file, cnv_file, vcf_file]
+                myth_file, diff_exp_norm_file, diff_myth_file,
+                exp_norm_file, cnv_file, vcf_file]
             for fname in all_files:
                 if not os.path.exists(fname):
                     print('File ' + fname + ' does not exist!')
                     sys.exit(1)
-            f = open(clinical_file)
-            content = f.read().strip()
-            f.close()
-            clin.append(content)
-            f = open(surv_file)
-            content = f.read().strip()
-            f.close()
-            suv_time.append(content)
+    #         f = open(clinical_file)
+    #         content = f.read().strip()
+    #         f.close()
+            clin.append(clinical_file)
+    #         f = open(surv_file)
+    #         content = f.read().strip()
+    #         f.close()
+            suv_time.append(surv_file)
             temp_myth=myth_data(myth_file, seen, d, dic)
             vec = np.array(
                 get_data(
                     exp_norm_file, diff_exp_norm_file, diff_myth_file,
                     cnv_file, vcf_file, temp_myth, seen, dic), dtype=np.float32)
             vec = vec.flatten()
-            vec = np.concatenate([
-                vec, cancer_type_vector, cancer_subtype_vector,
-                anatomical_location_vector, cell_type_vector])
+    #         vec = np.concatenate([
+    #             vec, cancer_type_vector, cancer_subtype_vector,
+    #             anatomical_location_vector, cell_type_vector])
             feat_vecs[i, :] = vec
             i += 1
-
+           
+    min_max_scaler = MinMaxScaler()
     labels_days = []
     labels_surv = []
     for days, surv in zip(clin, suv_time):
-        if days.replace("-", "") != "":
-            days = float(days)
-        else:
-            days = 0.0
+    #     if days.replace("-", "") != "":
+    #         days = float(days)
+    #     else:
+    #         days = 0.0
         labels_days.append(float(days))
         labels_surv.append(float(surv))
 
     # Train by batch
     dataset = feat_vecs
-    print(dataset.shape)
+    #print(dataset.shape)
     labels_days = np.array(labels_days)
     labels_surv = np.array(labels_surv)
     model = CoxPH(MyNet(
-        edge_index).to(device), tt.optim.Adam(0.001))
+        edge_index).to(device), tt.optim.Adam(0.0001))
 
     # Each time test on a specific cancer type
     total_cancers = ["TCGA-BRCA"]
@@ -231,30 +235,35 @@ def main(data_root, cancer_type, anatomical_location):
 
         # Split 70% from all 32 cancers and test on 15% of a specific one
         index = np.arange(len(dataset))
-        train_size = int(len(dataset) * 0.8)
-        val_size = int(len(dataset) * 0.1)
+        train_size = int(len(dataset) * 0.7)
+        val_size = int(len(dataset) * 0.15)
+        np.random.seed(seed=0)
         np.random.shuffle(index)
-        
+
         train_idx = index[:train_size]
         val_idx = index[train_size: (train_size + val_size)]
         test_idx = index[train_size + val_size:]
-        
+
         train_data = dataset[train_idx]
+        train_data = min_max_scaler.fit_transform(train_data)
         train_labels_days = labels_days[train_idx]
         train_labels_surv = labels_surv[train_idx]
         train_labels = (train_labels_days, train_labels_surv)
-        
+
         val_data = dataset[val_idx]
+        val_data = min_max_scaler.fit_transform(val_data)
         val_labels_days = labels_days[val_idx]
         val_labels_surv = labels_surv[val_idx]
         test_data = dataset[test_idx]
+        test_data = min_max_scaler.fit_transform(test_data)
         test_labels_days = labels_days[test_idx]
         test_labels_surv = labels_surv[test_idx]
         val_labels = (val_labels_days, val_labels_surv)
-        
+        print(val_labels)
+
         callbacks = [tt.callbacks.EarlyStopping()]
-        batch_size = 1
-        epochs = 2
+        batch_size = 16
+        epochs = 100
         val = (val_data, val_labels)
         log = model.fit(
             train_data, train_labels, batch_size, epochs, callbacks, True,
@@ -270,7 +279,7 @@ def main(data_root, cancer_type, anatomical_location):
         print(surv)
         ev = EvalSurv(surv, test_labels_days, test_labels_surv)
         print(ev.concordance_td())
-        
+    
 #         for t in test_dataset:
 #             predicted = model.predict_surv_df(t[x])
 #             c_index = EvalSurv(predicted, t[y],t[event]).concordance_td()
@@ -332,10 +341,8 @@ def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen, dic
             index=len(gene)
         gene=gene[:index]
         diffexp=float(diffexp)
-        if gene in dic:
-            for p in dic[gene]:
-                if p in seen:
-                    output[seen[p]][2]=diffexp
+        if gene in seen:
+            output[seen[gene]][2]=diffexp
 
     # Import differential methylation files and Pre-process them             
     f=open(diffmethyname)
@@ -349,10 +356,8 @@ def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen, dic
             index=len(gene)
         gene=gene[:index]
         diffmethy=float(diffmethy)
-        if gene in dic:
-            for p in dic[gene]:
-                if p in seen:
-                    output[seen[p]][3]=diffmethy
+        if gene in seen:
+            output[seen[gene]][3]=diffmethy
     # Import CNV files and Pre-process them
     f=open(cnvname)
     line=f.readlines()
