@@ -1,21 +1,70 @@
 #!/usr/bin/env python
 
-import click as ck
-import numpy as np
-import pandas as pd
-import pickle
-import gzip
 import os
-import sys
-import logging
-
+import time
+import numpy as np
+from tqdm import tqdm
+import rdflib as rl
 import torch
+import torchtuples as tt
 import torch.nn as nn
+import torch.optim as optim
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, SAGPooling
+from torch.optim import lr_scheduler
+from torch.utils.data.sampler import SubsetRandomSampler
+from sklearn.preprocessing import MinMaxScaler
+from pycox.models import CoxPH
+from pycox.evaluation import EvalSurv
+from torch_geometric.data import Data, DataLoader
+from torch_geometric.nn import GCNConv, SAGEConv, GraphConv, SAGPooling
 from torch_geometric.nn import global_max_pool as gmp
-from torch_geometric.data import Data
-from rdflib import Graph
+import click as ck
+import gzip
+import pickle
+import sys
+import matplotlib.pyplot as plt
+
+
+CANCER_SUBTYPES = [
+    [0,12,7,14,4,1,6,2,3],
+    [4],
+    [5,4,14,6],
+    [6,4,12,7],
+    [4],
+    [6,4,12,7],
+    [8],
+    [6,4,12],
+    [9],
+    [6],
+    [4],
+    [4],
+    [4],
+    [10],
+    [9],
+    [4],
+    [4,11,12],
+    [6],
+    [13],
+    [12],
+    [0,4,12,14],
+    [15],
+    [4,0,12],
+    [4,12],
+    [16,17,18,19,20],
+    [20],
+    [4,12],
+    [22],
+    [4,14],
+    [23],
+    [4,12,14],
+    [24],
+    [21]
+]
+
+CELL_TYPES = [
+    0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 3, 0, 0, 4, 2, 0,
+    0, 0, 5, 0, 0, 6, 0, 0, 7, 8, 0, 9, 0, 0, 0, 0,
+    8]
 
 @ck.command()
 @ck.option('--data-root', '-dr', default='data/', help='Data root folder', required=True)
@@ -40,15 +89,15 @@ def main(data_root, in_file, model_file, cancer_type_flag, anatomical_part_flag,
         sys.exit(1)
 
     # Read input data
-    data = load_data(data_root, in_file)
+    data, clinical, surv_time = load_data(data_root, in_file, cancer_type_flag, anatomical_part_flag)
     # Load and Run GCN model
-    output = load_model(model_file, data, cancer_type_flag, anatomical_part_flag)
+    output = load_model(model_file, data, clinical, surv_time)
     # Write the results to a file
     print_results(data, output, out_file, in_file)
 
     
 
-def load_data(data_root, in_file, proteins_nodes = 'seen.pkl', edges_indeces = 'ei.pkl', conv_prot = 'ens_dic.pkl'):
+def load_data(data_root, in_file, cancer_type_flag, anatomical_part_flag, proteins_nodes = 'seen.pkl', edges_indeces = 'ei.pkl', conv_prot = 'ens_dic.pkl'):
     """This function load input data and formats it
     """    
     # Import PPI network
@@ -58,6 +107,29 @@ def load_data(data_root, in_file, proteins_nodes = 'seen.pkl', edges_indeces = '
     f=open(os.path.join(data_root, edges_indeces),'rb')
     ei=pickle.load(f)
     f.close()
+    #############
+    global device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cpu')
+
+    cancer_type_vector = np.zeros((33,), dtype=np.float32)
+    cancer_type_vector[cancer_type_flag] = 1
+    
+    cancer_subtype_vector = np.zeros((25,), dtype=np.float32)
+    for i in CANCER_SUBTYPES[cancer_type_flag]:
+        cancer_subtype_vector[i] = 1
+    
+    anatomical_location_vector = np.zeros((52,), dtype=np.float32)
+    anatomical_location_vector[anatomical_part_flag] = 1
+    cell_type_vector = np.zeros((10,), dtype=np.float32)
+    cell_type_vector[CELL_TYPES[cancer_type_flag]] = 1
+
+    pt_tensor_cancer_type = torch.FloatTensor(cancer_type_vector).to(device)
+    pt_tensor_cancer_subtype = torch.FloatTensor(cancer_subtype_vector).to(device)
+    pt_tensor_anatomical_location = torch.FloatTensor(anatomical_location_vector).to(device)
+    pt_tensor_cell_type = torch.FloatTensor(cell_type_vector).to(device)
+    edge_index = torch.LongTensor(ei).to(device)
+    
     #############
     # Import a dictionary that maps protiens to their coresponding genes from Ensembl database
     f = open(os.path.join(data_root, conv_prot),'rb')
@@ -70,19 +142,24 @@ def load_data(data_root, in_file, proteins_nodes = 'seen.pkl', edges_indeces = '
             dic[key] = {}
             dic[key][d] = 1
     #############
+    clin = [] # for clinical data (i.e. number of days to survive, days to death for dead patients and days to last followup for alive patients)
+    feat_vecs = [] # list of lists ([[patient1],[patient2],.....[patientN]]) -- [patientX] = [gene_expression_value, diff_gene_expression_value, methylation_value, diff_methylation_value, VCF_value, CNV_value]
+    suv_time = [] # list that include wheather a patient is alive or dead (i.e. 0 for dead and 1 for alive)
     f = open(in_file)
     line = f.readlines()
     f.close()
     data = [[0,0,0,0,0,0] for j in range(len(seen)+1)]
+    feat_vecs = np.zeros((1, 17186 * 6), dtype=np.float32)
     for l in line:
-        gene, exp, diffexp, methyl, diffmethyl, cnv, snv = l.split('\t')
-        # Normalize the features
+        gene, exp, diffexp, methyl, diffmethyl, cnv, snv, clin, surv = l.split('\t')
         exp = float(exp)
         diffexp = float(diffexp)
         methyl = float(methyl)
         diffmethyl = float(diffmethyl)
         cnv = float(cnv)
         snv = float(snv)
+        clin = float(clin)
+        surv = float(surv)
         if gene in dic:
             for p in dic[gene]:
                 if p in seen:
@@ -92,203 +169,71 @@ def load_data(data_root, in_file, proteins_nodes = 'seen.pkl', edges_indeces = '
                     data[seen[p]][3] = diffmethyl
                     data[seen[p]][4] = cnv
                     data[seen[p]][5] = snv
-    edge = torch.tensor(ei,dtype=torch.long)
-    x = torch.tensor(data,dtype=torch.float)
-    dataset = Data(x = x,edge_index = edge)
-    return dataset
+    clin.append(clin)
+    suv_time.append(surv)
+    vec = np.array(data, dtype=np.float32)
+    vec = vec.flatten()
+    vec = np.concatenate([
+    vec, cancer_type_vector, cancer_subtype_vector,
+    anatomical_location_vector, cell_type_vector])
+    feat_vecs[0, :] = vec
+    labels_days = []
+    labels_surv = []
+    for days, surv in zip(clin, suv_time):
+        labels_days.append(float(days))
+        labels_surv.append(float(surv))
 
-def load_model(model_file, data, cancer_type_flag, anatomical_part_flag):
+    # Train by batch
+    dataset = feat_vecs
+    #print(dataset.shape)
+    labels_days = np.array(labels_days)
+    labels_surv = np.array(labels_surv)
+    return dataset, labels_days, labels_surv
+
+def load_model(model_file, data, clinical, surv_time):
     """The function for loading a pytorch model
     """
     #############
-    cancer_type = [0] * 33
-    cancer_subtype = [0] * 25
-    anatomical_location = [0] * 52
-    cell_type = [0] * 10
-    if cancer_type_flag == '1':
-        for i in [0,12,7,14,4,1,6,2,3]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '2':
-        for i in [4]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '3':
-        for i in [5,4,14,6]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '4':
-        for i in [6,4,12,7]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '5':
-        for i in [4]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '6':
-        for i in [6,4,12,7]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '7':
-        for i in [8]:
-            cancer_subtype[i] = 1
-        cell_type[1] = 1
-    elif cancer_type_flag == '8':
-        for i in [6,4,12]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '9':
-        for i in [9]:
-            cancer_subtype[i] = 1
-        cell_type[2] = 1
-    elif cancer_type_flag == '10':
-        for i in [6]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '11':
-        for i in [4]:
-            cancer_subtype[i] = 1
-        cell_type[3] = 1
-    elif cancer_type_flag == '12':
-        for i in [4]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '13':
-        for i in [4]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '14':
-        for i in [10]:
-            cancer_subtype[i] = 1
-        cell_type[4] = 1
-    elif cancer_type_flag == '15':
-        for i in [9]:
-            cancer_subtype[i] = 1
-        cell_type[2] = 1
-    elif cancer_type_flag == '16':
-        for i in [4]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '17':
-        for i in [4,11,12]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '18':
-        for i in [6]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '19':
-        for i in [13]:
-            cancer_subtype[i] = 1
-        cell_type[5] = 1
-    elif cancer_type_flag == '20':
-        for i in [12]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '21':
-        for i in [0,4,12,14]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '22':
-        for i in [15]:
-            cancer_subtype[i] = 1
-        cell_type[6] = 1
-    elif cancer_type_flag == '23':
-        for i in [4,0,12]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '24':
-        for i in [4,12]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '25':
-        for i in [16,17,18,19,20]:
-            cancer_subtype[i] = 1
-        cell_type[7] = 1
-    elif cancer_type_flag == '26':
-        for i in [20]:
-            cancer_subtype[i] = 1
-        cell_type[8] = 1
-    elif cancer_type_flag == '27':
-        for i in [4,12]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '28':
-        for i in [22]:
-            cancer_subtype[i] = 1
-        cell_type[9] = 1
-    elif cancer_type_flag == '29':
-        for i in [4,14]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '30':
-        for i in [23]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '31':
-        for i in [4,12,14]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '32':
-        for i in [24]:
-            cancer_subtype[i] = 1
-        cell_type[0] = 1
-    elif cancer_type_flag == '33':
-        for i in [21]:
-            cancer_subtype[i] = 1
-        cell_type[8] = 1
-    else:
-        print('!!The Cancer Type You Entered is NOT Correct!!')
-            
-    t = int(cancer_type_flag)
-    a = int(anatomical_part_flag)
-    cancer_type[t-1] = 1
-    anatomical_location [a-1] = 1
-
-    pt_tensor_cancer_type = torch.FloatTensor(cancer_type)
-    pt_tensor_cancer_subtype = torch.FloatTensor(cancer_subtype)
-    pt_tensor_anatomical_location = torch.FloatTensor(anatomical_location)
-    pt_tensor_cell_type = torch.FloatTensor(cell_type)
-    
     # Define the model
     class MyNet(nn.Module):
         def __init__(self):
             super(MyNet, self).__init__()
+            self.edge_index = edge_index
             self.conv1 = GCNConv(6,64)
             self.pool1 = SAGPooling(64, ratio=0.70, GNN=GCNConv)
             self.conv2 = GCNConv(64,32)
             self.fc1 = nn.Linear(32,1)
-
-            self.fc2 = nn.Linear(33,1)
-            self.fc3 = nn.Linear(25,1)
-            self.fc4 = nn.Linear(52,1)
-            self.fc5 = nn.Linear(10,1)
+            self.sigmoid = nn.Sigmoid()
+            self.fc2 = nn.Linear(120, 32)
+            self.test = nn.Linear(68744, 1)
 
         def forward(self, data):
-            x, edge_index = data.x, data.edge_index
-            x = F.relu(self.conv1(x, edge_index))
-            x, edge_index, _, batch, perm, score = self.pool1(x, edge_index, None, None, None)
+            batch_size = data.shape[0]
+            x = data[:, :103116]
+            metadata = data[:, 103116:]
+            input_size = 17186
+            x = x.reshape(-1, 6)
+            batches = []
+            for i in range(batch_size):
+                tr = torch.ones(input_size, dtype=torch.int64) * i
+                batches.append(tr)
+            batch = torch.cat(batches, 0).to(device)
+            x = F.relu(self.conv1(x, self.edge_index))
+            x, edge_index, _, batch, perm, score = self.pool1(x, self.edge_index, None, batch)
             x = F.relu(self.conv2(x, edge_index))
-            x = gmp(x,batch)
+            x = gmp(x, batch)
             features = x
-            x=x.view(1,-1)
-            ct = self.fc2(pt_tensor_cancer_type)
-            cs = self.fc3(pt_tensor_cancer_subtype)
-            al = self.fc4(pt_tensor_anatomical_location)
-            cet = self.fc5(pt_tensor_cell_type)
-            concat_tensors = torch.cat([ct, cs, al, cet], dim=0)
+            x = x.view(batch_size, -1)
             x = self.fc1(x)
-            concat_tensors = torch.unsqueeze(concat_tensors, 0)
-            x = torch.matmul(x, concat_tensors)
-            x = x.squeeze(1)
-            x = torch.mean(x)
-            x = torch.tensor([x])
+            x = self.sigmoid(x)
             return x, features
         
-    model = MyNet()
-    model.load_state_dict(torch.load(model_file))
-    model.eval()
-    prediction, features = model(data)
+
+    m = MyNet(edge_index).to(device)
+    model = CoxPH(MyNet(edge_index).to(device), tt.optim.Adam(0.0001))    
+    _, features = m(data)
+    model.load_net('/encrypted/e3008/Sara/model')
+    prediction = model.predict_surv_df(data)
 
     return prediction, features
 
@@ -301,10 +246,8 @@ def print_results(dataset, results, out_file, in_file):
     with open(file_name, 'w') as f:
         f.write(os.path.splitext(in_file)[0] + '\t')
         for item in prediction:
-            f.write(str(item.item()))
-        for item in features.flatten():
-            f.write('\t' + str(item))
-        f.write('\n')
+            f.write(str(item.item()) + '\t')
+        f.write(str(features) + '\n')
             
 
     print(f'***DONE***\n***The results have been written to {file_name}***')
