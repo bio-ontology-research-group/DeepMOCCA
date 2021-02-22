@@ -1,82 +1,61 @@
 @Grab(group='colt', module='colt', version='1.2.0')
+@Grab(group='org.apache.commons', module='commons-math3', version='3.5')
 import cern.colt.list.*
 import cern.jet.stat.Descriptive
 import cern.jet.stat.Probability
+import org.apache.commons.math3.stat.inference.*
 
-def ttest (def mean1, def mean2, def sd1, def sd2, def n, def m) {
-     return (mean1 - mean2) / Math.sqrt((sd1 * sd1) / n + (sd2 * sd2) / m)
-}
+def genes = new LinkedHashSet()
 
-def probt(def degree, def t) {
-    return Probability.studentT(degree, t)
-}
-
+TTest tTest = new TTest()
 
 def nmap = [:] // ENSG to Name
-def pcount = 0
-def map = [:].withDefault { [:].withDefault { new DoubleArrayList() } } //gene -> cancer -> rank[]
-new File("complete_ranked_genes_all_samples/").eachFile { file ->
-//    println "$pcount patients processed."
-    pcount += 1
+def map = [:].withDefault { [:].withDefault { [] } } //gene -> cancer -> rank[]
+new File("complete_ranked_genes_all_samples-new/").eachFile { file ->
     def first = true
     def count = 0
-    def patient = file.toString().replaceAll(".txt", "").replaceAll("complete_ranked_genes_all_samples/","")
+    def cancer = ""
     file.splitEachLine("\t") { line ->
 	if (first) {
 	    first = false
 	} else {
 	    def gene = line[0]
-	    def cancer = line[1]
+	    cancer = line[1]
 	    def gname = line[2]
-	    if (cancer.startsWith("TCGA")) {
-		map[gene][cancer].add(count)
-		nmap[gene] = gname
-		count += 1
-	    }
+	    map[gene][cancer] << count
+	    nmap[gene] = gname
+	    count += 1
 	}
     }
 }
 
+// get cohort sizes
+def cmap = [:].withDefault { 0 }
 map.each { gene, map2 ->
-    def l2 = new DoubleArrayList()
     map2.each { cancer, l ->
-	def mean = Descriptive.mean(l)
-	def sd = Descriptive.standardDeviation(Descriptive.variance(l.size(), Descriptive.sum(l), Descriptive.sumOfSquares(l)))
-	def m = l.size()
-
-	// test against uniform random
-	def mean2 = 0.5 * m // (1/2) * (a + b)
-	def sd2 = Descriptive.standardDeviation((1/12) * (m-1) * (m-1)) // (1/12) * (b-a)^2
-
-	if (m > 2) {
-	    try {
-		def pval = probt(m-1.0, ttest(mean, mean2, sd, sd2, m, m))
-		if ((pval * map.keySet().size() * 33) < 0.05 ) { // Bonferroni correction
-		    println "GLOBAL\t$gene\t${nmap[gene]}\t$cancer\t"+pval+"\t"+(pval * map.keySet().size() * 33)
-		}
-	    } catch (Exception E) {
-		E.printStackTrace()
-	    }
+	if (cmap[cancer] < l.size()) {
+	    cmap[cancer] = l.size()
 	}
-	l2.addAllOf(l)
     }
-    // test against ranks in other cancers (compare against l2)
-    def mean2 = Descriptive.mean(l2)
-    def sd2 = Descriptive.standardDeviation(Descriptive.variance(l2.size(), Descriptive.sum(l2), Descriptive.sumOfSquares(l2)))
-    def m2 = l2.size()
+}
+
+def gsize = nmap.keySet().size()
+
+map.each { gene, map2 ->
     map2.each { cancer, l ->
-	def mean = Descriptive.mean(l)
-	def sd = Descriptive.standardDeviation(Descriptive.variance(l.size(), Descriptive.sum(l), Descriptive.sumOfSquares(l)))
-	def m = l.size()
-	if (m > 2) {
-	    try {
-		def pval = probt(m-1.0, ttest(mean, mean2, sd, sd2, m, m2))
-		if ((pval * map.keySet().size() * 33) < 0.05 ) { // Bonferroni correction
-		    println "SPECIFIC\t$gene\t${nmap[gene]}\t$cancer\t"+pval+"\t"+pval*map.keySet().size() * 33
-		}
-	    } catch (Exception E) {
-		E.printStackTrace()
-		exit()
+	Double mean2 = ( 17186 ) / 2
+
+	// add the missing values (omitted through pooling) -> they are ranked bottom
+	(cmap[cancer] - l.size()).times {
+	    l << 17186 * 1 // 17186
+	}
+	
+	def mean = l.sum() / l.size()
+
+	if (l.size() > 2) {
+	    def pval = tTest.tTest(mean2, (Double[])l.toArray()) * 17186 * 33  // with Bonferroni correction; two-sided
+	    if ((pval ) < 0.05 && mean < mean2 ) { 
+		println "$gene\t${nmap[gene]}\t$cancer\t"+pval + "\t" + mean
 	    }
 	}
     }
