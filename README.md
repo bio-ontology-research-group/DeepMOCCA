@@ -1,25 +1,24 @@
 # DeepMOCCA - Deep Multi Omics CanCer Analysis
 
-DeepMOCCA is a method that automatically learn representations of the multi-scale activities and interactions within a cell from multi-omics data associated with individual cancer samples by predicting the survival time.
+DeepMOCCA is a method to predict survival time in individual cancer samples. DeepMOCCA also learns representations of the multi-scale activities and interactions within a cell from multi-omics data associated with these samples.
 
-Our tool takes as input data derived from individual sample, in particular the absolute gene expression, differential expression, absolute methylation, differential methylation, type of the copy number variants, and pathogenicity scores for the set of germline and somatic variants. As well as, the cancer type and anatomical location. We use this information to determine the cell type of origin.
-
+Our tool takes as input data derived from individual sample, in particular the absolute gene expression, differential expression, absolute methylation, differential methylation, type of the copy number variants, and pathogenicity scores for the set of germline and somatic variants; it also has as input the cancer type and anatomical location of the tumor. We use this information to determine the cell type of origin.
 
 ## Datasets
 
-* All multi-omics data for the 33 cancer types (i.e. gene expression, DNA methylation, copy number variation (CNV), single nucleotide variation (SNV) and clinical data) have been downloded from [The Cancer Genome Atlas (TCGA)](http://cancergenome.nih.gov) via their [Data Transfer Tool Client](https://gdc.cancer.gov/access-data/gdc-data-transfer-tool)
+* All multi-omics data for the 33 cancer types (i.e. gene expression, DNA methylation, copy number variation (CNV), single nucleotide variation (SNV) and clinical data) have been downloaded from the [The Cancer Genome Atlas (TCGA)](http://cancergenome.nih.gov) via their [Data Transfer Tool Client](https://gdc.cancer.gov/access-data/gdc-data-transfer-tool). Approval is required to access individual level data.
 
-* The protein-protein interactions network for human from [STRING](https://string-db.org/cgi/download.pl?sessionId=VKCYtvc7YJch&species_text=Homo+sapiens)
+* The protein-protein interactions network is from [STRING](https://string-db.org/cgi/download.pl?sessionId=VKCYtvc7YJch&species_text=Homo+sapiens).
 
 ## Dependencies
 
 * To install python dependencies run: `pip install -r requirements.txt`
 
-* Note: the `torch` and `torch geometric cuda` need to have the same version, we suggest to follow the instructions [Here](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
+* Note: the `torch` and `torch geometric cuda` need to have the same version, we suggest to follow the instructions [here](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
 
 ## Installation
 
-`pip install deepmocca`
+`pip install deepmocca` should work in most cases.
 
 ## Running
 
@@ -137,12 +136,12 @@ Options:
 The model will output:
 - A tab separated file has the same name as input file with **_results** extension which contains:
     * Sample_ID
-    * Time to live for a sample being testes for the selected cancer type and anatomical part
-    * A vector representation for each the sample retrieved through the model learning process
-
+    * Predicted survival time for a sample, for the selected cancer type and anatomical part
+    * A vector representation for the sample based on the internal representation of the model
+ 
 ## Scripts
 
-* `preprocess_gene_expression.py` - This script is used to preprocess and normlize gene expression data.
+* `preprocess_gene_expression.py` - This script is used to preprocess and normalize gene expression data.
 * `preprocess_methylation.py` - This script is used to preprocess the DNA methylation data.
 * `preprocess_CNV.py` - This script is used to preprocess the copy number variation (CNV) data.
 * `process_vcf.sh` and `process_vcf.py` - These scripts are used to preprocess the single-nucleotide variation (SNV) data.
@@ -150,17 +149,15 @@ The model will output:
 
 ## Results
 
-Find [Here](https://github.com/bio-ontology-research-group/DeepMOCCA/tree/master/results) the generated results files:
+We have some [results](https://github.com/bio-ontology-research-group/DeepMOCCA/tree/master/results) pre-generated:
 
 - `patients_representations.txt` - The representation of features for each patient generated after the 2nd `Conv2` layer.
-- `Top_10_ranked_genes_all_samples.tar.gz` - The top 10 ranked genes for each patient genrated from attention-based mechanism which specifiy wheather a gene is:
+- `Top_10_ranked_genes_all_samples.tar.gz` - The top 10 ranked genes for each patient genrated from the attention mechanism which specifiy wheather a gene is:
   * `Driver in the same cancer` -> `0` if yes and `1` if no.
   * `Driver in other cancer` -> `0` if yes and `1` if no.
   * `Prognostic in the same cancer` -> `0` if yes and `1` if no.
   * `Prognostic in other cancer` -> `0` if yes and `1` if no.
       
-- `overall_ranked_top10.txt` - The top 10 ranked genes over all the patients across all the cancer types combined from `ranked_genes_top10.tar.gz` and `count` column specifying the number of patients having this specific gene within the top 10 and for the same cancer type.
-
 ## Final notes
 
-For any comments or help needed with how to run the scripts, please send an email to: sara.althubaiti@kaust.edu.sa
+For any comments or help, please use the issue tracker or send an email to sara.althubaiti@kaust.edu.sa.
