@@ -16,4 +16,4 @@
 
 - `sorted/` - Genes that are ranked significantly higher by our model's graph attention mechanism across all samples within each cohort/cancer type than expected under a uniform random distribution; reported their p-value, effect size, Holm–Bonferroni correction and Benjamini-Hochberg correction sorted by the effect size.
 
-- `filtered/` - Same list of genes in `sorted/` filtered by the last column (Benjamini-Hochberg correction) and sorted by the effect size.
+- `filtered/` - Same list of genes in `sorted/` filtered by p<0.2 (Benjamini-Hochberg correction) and sorted by the effect size.
