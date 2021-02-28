@@ -23,7 +23,7 @@ Our tool takes as input data derived from individual sample, in particular the a
 ## Running
 
 * Download all the files in [data.tar.gz](https://bio2vec.cbrc.kaust.edu.sa/data/deepmocca/data.tar.gz) and place them into data folder
-* `deepmocca -dr <path_to_data_folder> -if <input_fasta_filename> -ct <cancer_type> -ap <anatomical_location>`
+* `deepmocca -dr <path_to_data_folder> -if <input_filename> -ct <cancer_type> -ap <anatomical_location>`
 * Run `deepmocca --help` to display a description for the parameters:
 ```
 Usage: deepmocca [OPTIONS]
@@ -38,6 +38,8 @@ Options:
   -of, --out-file TEXT            Output result file
   --help                          Show this message and exit.
   ```
+  
+* `example_file.txt` - An example file for test a one patient which include set of genes with their corresponding multi-omics features.
   
 #### Cancer types and Anatomical locations parameters
 ```
