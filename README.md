@@ -39,7 +39,7 @@ Options:
   --help                          Show this message and exit.
   ```
   
-* `example_file.txt` - An example file for test a one patient which include set of genes with their corresponding multi-omics features.
+* `example_file.txt` - An example file to test one sample
   
 #### Cancer types and Anatomical locations parameters
 ```
