@@ -1,5 +1,6 @@
-#!/usr/bin/env python
+# coding: utf-8
 
+#!/usr/bin/env python
 import os
 import time
 import numpy as np
@@ -24,6 +25,58 @@ import pickle
 import sys
 import matplotlib.pyplot as plt
 
+class MyNet(nn.Module):
+    def __init__(self, edge_index):
+        super(MyNet, self).__init__()
+        self.edge_index = edge_index
+        self.conv1 = GCNConv(6,64)
+        self.pool1 = SAGPooling(64, ratio=0.70, GNN=GCNConv)
+        self.conv2 = GCNConv(64,32)
+        self.fc1 = nn.Linear(32,1)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, data):
+        batch_size = data.shape[0]
+        x = data[:, :103116]
+        metadata = data[:, 103116:]
+        input_size = 17186
+        x = x.reshape(-1, 6)
+        batches = []
+        for i in range(batch_size):
+            tr = torch.ones(input_size, dtype=torch.int64) * i
+            batches.append(tr)
+        batch = torch.cat(batches, 0).to(device)
+        #x = torch.from_numpy(x).to(device)
+        x = F.relu(self.conv1(x, self.edge_index))
+        x, edge_index, _, batch, perm, score = self.pool1(x, self.edge_index, None, batch)
+        x = F.relu(self.conv2(x, edge_index))
+        x = gmp(x, batch)
+        #features = x
+        x = x.view(batch_size, -1)
+        x = self.fc1(x)
+        x = self.sigmoid(x)
+        return x
+
+
+def features(net, data):
+    batch_size = data.shape[0]
+    x = data[:, :103116]
+    metadata = data[:, 103116:]
+    input_size = 17186
+    x = x.reshape(-1, 6)
+    batches = []
+    for i in range(batch_size):
+        tr = torch.ones(input_size, dtype=torch.int64) * i
+        batches.append(tr)
+    batch = torch.cat(batches, 0).to(device)
+    x = F.relu(net.conv1(x, net.edge_index))
+    x, edge_index, _, batch, perm, score = net.pool1(x, net.edge_index, None, batch)
+    x = F.relu(net.conv2(x, edge_index))
+    x = gmp(x, batch)
+    return x
+
+global device
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 CANCER_SUBTYPES = [
     [0,12,7,14,4,1,6,2,3],
@@ -69,7 +122,7 @@ CELL_TYPES = [
 @ck.command()
 @ck.option('--data-root', '-dr', default='data/', help='Data root folder', required=True)
 @ck.option('--in-file', '-if', help='Input file', required=True)
-@ck.option('--model-file', '-mf', default='model.h5', help='Pytorch model file')
+@ck.option('--model-file', '-mf', default='model.pt', help='Pytorch model file')
 @ck.option('--cancer-type-flag', '-ct', help='Cancer type flag', required=True)
 @ck.option('--anatomical-part-flag', '-ap', help='Anatomical part flag', required=True)
 @ck.option('--out-file', '-of', default='results.tsv', help='Output result file')
@@ -89,9 +142,11 @@ def main(data_root, in_file, model_file, cancer_type_flag, anatomical_part_flag,
         sys.exit(1)
 
     # Read input data
-    data, clinical, surv_time = load_data(data_root, in_file, cancer_type_flag, anatomical_part_flag)
+    cancer_type_flag = int(cancer_type_flag)
+    anatomical_part_flag = int(anatomical_part_flag)
+    data, clinical, surv_time, edge_index = load_data(data_root, in_file, cancer_type_flag, anatomical_part_flag)
     # Load and Run GCN model
-    output = load_model(model_file, data, clinical, surv_time)
+    output = load_model(model_file, data, clinical, surv_time, edge_index)
     # Write the results to a file
     print_results(data, output, out_file, in_file)
 
@@ -108,8 +163,6 @@ def load_data(data_root, in_file, cancer_type_flag, anatomical_part_flag, protei
     ei=pickle.load(f)
     f.close()
     #############
-    global device
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # device = torch.device('cpu')
 
     cancer_type_vector = np.zeros((33,), dtype=np.float32)
@@ -142,14 +195,14 @@ def load_data(data_root, in_file, cancer_type_flag, anatomical_part_flag, protei
             dic[key] = {}
             dic[key][d] = 1
     #############
-    clin = [] # for clinical data (i.e. number of days to survive, days to death for dead patients and days to last followup for alive patients)
+    clin_vec = [] # for clinical data (i.e. number of days to survive, days to death for dead patients and days to last followup for alive patients)
     feat_vecs = [] # list of lists ([[patient1],[patient2],.....[patientN]]) -- [patientX] = [gene_expression_value, diff_gene_expression_value, methylation_value, diff_methylation_value, VCF_value, CNV_value]
     suv_time = [] # list that include wheather a patient is alive or dead (i.e. 0 for dead and 1 for alive)
     f = open(in_file)
     line = f.readlines()
     f.close()
     data = [[0,0,0,0,0,0] for j in range(len(seen)+1)]
-    feat_vecs = np.zeros((1, 17186 * 6), dtype=np.float32)
+    feat_vecs = np.zeros((1, 17186 * 6 + 120), dtype=np.float32)
     for l in line:
         gene, exp, diffexp, methyl, diffmethyl, cnv, snv, clin, surv = l.split('\t')
         exp = float(exp)
@@ -169,7 +222,9 @@ def load_data(data_root, in_file, cancer_type_flag, anatomical_part_flag, protei
                     data[seen[p]][3] = diffmethyl
                     data[seen[p]][4] = cnv
                     data[seen[p]][5] = snv
-    clin.append(clin)
+#                     data[seen[p]][6] = clin
+#                     data[seen[p]][7] = surv
+    clin_vec.append(clin)
     suv_time.append(surv)
     vec = np.array(data, dtype=np.float32)
     vec = vec.flatten()
@@ -179,7 +234,7 @@ def load_data(data_root, in_file, cancer_type_flag, anatomical_part_flag, protei
     feat_vecs[0, :] = vec
     labels_days = []
     labels_surv = []
-    for days, surv in zip(clin, suv_time):
+    for days, surv in zip(clin_vec, suv_time):
         labels_days.append(float(days))
         labels_surv.append(float(surv))
 
@@ -188,54 +243,29 @@ def load_data(data_root, in_file, cancer_type_flag, anatomical_part_flag, protei
     #print(dataset.shape)
     labels_days = np.array(labels_days)
     labels_surv = np.array(labels_surv)
-    return dataset, labels_days, labels_surv
+    #print(dataset.shape)
+    #edge = torch.tensor(ei,dtype=torch.long)
+    #x = torch.tensor(data,dtype=torch.float)
+    #dataset = Data(x = x,edge_index = edge)
+    return dataset, labels_days, labels_surv, edge_index
 
-def load_model(model_file, data, clinical, surv_time):
+def load_model(model_file, data, clinical, surv_time, edge_index):
     """The function for loading a pytorch model
     """
     #############
-    # Define the model
-    class MyNet(nn.Module):
-        def __init__(self):
-            super(MyNet, self).__init__()
-            self.edge_index = edge_index
-            self.conv1 = GCNConv(6,64)
-            self.pool1 = SAGPooling(64, ratio=0.70, GNN=GCNConv)
-            self.conv2 = GCNConv(64,32)
-            self.fc1 = nn.Linear(32,1)
-            self.sigmoid = nn.Sigmoid()
-            self.fc2 = nn.Linear(120, 32)
-            self.test = nn.Linear(68744, 1)
-
-        def forward(self, data):
-            batch_size = data.shape[0]
-            x = data[:, :103116]
-            metadata = data[:, 103116:]
-            input_size = 17186
-            x = x.reshape(-1, 6)
-            batches = []
-            for i in range(batch_size):
-                tr = torch.ones(input_size, dtype=torch.int64) * i
-                batches.append(tr)
-            batch = torch.cat(batches, 0).to(device)
-            x = F.relu(self.conv1(x, self.edge_index))
-            x, edge_index, _, batch, perm, score = self.pool1(x, self.edge_index, None, batch)
-            x = F.relu(self.conv2(x, edge_index))
-            x = gmp(x, batch)
-            features = x
-            x = x.view(batch_size, -1)
-            x = self.fc1(x)
-            x = self.sigmoid(x)
-            return x, features
-        
-
     m = MyNet(edge_index).to(device)
-    model = CoxPH(MyNet(edge_index).to(device), tt.optim.Adam(0.0001))    
-    _, features = m(data)
-    model.load_net('/encrypted/e3008/Sara/model')
+    model = CoxPH(m, tt.optim.Adam(0.0001))    
+    #_, features = m(data)
+    #print(features)
+    model.load_net(model_file)
     prediction = model.predict_surv_df(data)
+    #print(prediction)
+    fs = features(model.net, torch.from_numpy(data).to(device))
+    #print(fs)
+    #ev = EvalSurv(prediction, clinical, surv_time)
+    #prediction = ev.concordance_td()
 
-    return prediction, features
+    return prediction, fs
 
 def print_results(dataset, results, out_file, in_file):
     """Write results to a file
@@ -245,10 +275,8 @@ def print_results(dataset, results, out_file, in_file):
     features = features.data.cpu().numpy()
     with open(file_name, 'w') as f:
         f.write(os.path.splitext(in_file)[0] + '\t')
-        for item in prediction:
-            f.write(str(item.item()) + '\t')
+        f.write(str(prediction) + '\t')
         f.write(str(features) + '\n')
-            
 
     print(f'***DONE***\n***The results have been written to {file_name}***')
     
