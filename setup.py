@@ -27,13 +27,13 @@ pytest_runner = ["pytest < 6", "pytest-runner < 5"] if needs_pytest else []
 
 setup(
     name="deepmocca",
-    version="1.0.0",
+    version="1.0.1",
     description="DeepMOCCA",
     long_description=open(README).read(),
     long_description_content_type="text/markdown",
     author="Sara Althubaiti",
     author_email="sara.althubaiti@kaust.edu.sa",
-    download_url="https://github.com/bio-ontology-research-group/deepmocca/archive/v1.0.0.tar.gz",
+    download_url="https://github.com/bio-ontology-research-group/deepmocca/archive/v1.0.1.tar.gz",
     license="Apache 2.0",
     packages=["deepmocca",],
     package_data={"deepmocca": [],},
