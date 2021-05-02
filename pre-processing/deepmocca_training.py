@@ -104,7 +104,8 @@ class MyNet(nn.Module):
 @ck.option('--data-root', '-dr', default='data/', help='Root folder with all training data')
 @ck.option('--cancer-type', '-ct', default=0, help='Cancer type index (0-32)')
 @ck.option('--anatomical-location', '-al', default=0, help='Anatomical location index (0-51)')
-def main(data_root, cancer_type, anatomical_location):
+@ck.option('--fold', '-fl', default=0, help='Cross validation fold (0-4)')
+def main(data_root, cancer_type, anatomical_location, fold):
 
     # Import the RDF graph for PPI network
     f = open('seen.pkl','rb')
@@ -208,7 +209,7 @@ def main(data_root, cancer_type, anatomical_location):
             feat_vecs[i, :] = vec
             i += 1
            
-    min_max_scaler = MinMaxScaler()
+    min_max_scaler = MinMaxScaler(clip=True)
     labels_days = []
     labels_surv = []
     for days, surv in zip(clin, suv_time):
@@ -234,16 +235,23 @@ def main(data_root, cancer_type, anatomical_location):
         # train_set = [d for t, d in zip(total_cancers, dataset) if t != total_cancers[i]]
 
         # Split 70% from all 32 cancers and test on 15% of a specific one
-        index = np.arange(len(dataset))
-        train_size = int(len(dataset) * 0.7)
-        val_size = int(len(dataset) * 0.15)
+        n = len(dataset)
+        index = np.arange(n)
+        i = n // 5
         np.random.seed(seed=0)
         np.random.shuffle(index)
-
-        train_idx = index[:train_size]
-        val_idx = index[train_size: (train_size + val_size)]
-        test_idx = index[train_size + val_size:]
-
+        if fold < 4:
+            test_idx = index[fold * i: fold * i + i]
+            train_idx = index[:fold * i] + index[fold * i + i:]
+        else:
+            test_idx = index[fold * i:]
+            train_idx = index[:fold * i]
+        train_n = len(train_index)
+        valid_n = train_n // 10
+        valid_idx = train_idx[:valid_n]
+        train_idx = train_idx[valid_n:]
+        train_n = len(train_idx)
+        
         train_data = dataset[train_idx]
         train_data = min_max_scaler.fit_transform(train_data)
         train_labels_days = labels_days[train_idx]
@@ -251,11 +259,11 @@ def main(data_root, cancer_type, anatomical_location):
         train_labels = (train_labels_days, train_labels_surv)
 
         val_data = dataset[val_idx]
-        val_data = min_max_scaler.fit_transform(val_data)
+        val_data = min_max_scaler.transform(val_data)
         val_labels_days = labels_days[val_idx]
         val_labels_surv = labels_surv[val_idx]
         test_data = dataset[test_idx]
-        test_data = min_max_scaler.fit_transform(test_data)
+        test_data = min_max_scaler.transform(test_data)
         test_labels_days = labels_days[test_idx]
         test_labels_surv = labels_surv[test_idx]
         val_labels = (val_labels_days, val_labels_surv)
