@@ -160,10 +160,10 @@ def main(data_root, cancer_type, anatomical_location):
     feat_vecs = [] # list of lists ([[patient1],[patient2],.....[patientN]]) -- [patientX] = [gene_expression_value, diff_gene_expression_value, methylation_value, diff_methylation_value, VCF_value, CNV_value]
     suv_time = [] # list that include wheather a patient is alive or dead (i.e. 0 for dead and 1 for alive)
     can_types = ["BRCA_v2"]
-    #data_root = '/ibex/scratch/projects/c2014/sara/'
+    data_root = '/ibex/scratch/projects/c2014/sara/'
     for i in range(len(can_types)):
         # file that contain patients ID with their coressponding 6 differnt files names (i.e. files names for gene_expression, diff_gene_expression, methylation, diff_methylation, VCF and CNV)
-        f = open(can_types[i] + '.txt')
+        f = open(data_root + can_types[i] + '.txt')
         lines = f.read().splitlines()
         f.close()
         lines = lines[1:]
