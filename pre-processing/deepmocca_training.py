@@ -225,69 +225,113 @@ def main(data_root, cancer_type, anatomical_location, fold):
     #print(dataset.shape)
     labels_days = np.array(labels_days)
     labels_surv = np.array(labels_surv)
+
+    censored_index = []
+    uncensored_index = []
+    for i in range(len(dataset)):
+        if labels_surv[i] == 1:
+            censored_index.append(i)
+        else:
+            uncensored_index.append(i)
     model = CoxPH(MyNet(
         edge_index).to(device), tt.optim.Adam(0.0001))
 
-    # Each time test on a specific cancer type
-    total_cancers = ["TCGA-BRCA"]
-    for i in range(len(total_cancers)):
-        # test_set = [d for t, d in zip(total_cancers, dataset) if t == total_cancers[i]]
-        # train_set = [d for t, d in zip(total_cancers, dataset) if t != total_cancers[i]]
-
-        # Split 70% from all 32 cancers and test on 15% of a specific one
-        n = len(dataset)
-        index = np.arange(n)
-        i = n // 5
-        np.random.seed(seed=0)
-        np.random.shuffle(index)
-        if fold < 4:
-            test_idx = index[fold * i: fold * i + i]
-            train_idx = index[:fold * i] + index[fold * i + i:]
-        else:
-            test_idx = index[fold * i:]
-            train_idx = index[:fold * i]
-        train_n = len(train_index)
-        valid_n = train_n // 10
-        valid_idx = train_idx[:valid_n]
-        train_idx = train_idx[valid_n:]
-        train_n = len(train_idx)
-        
-        train_data = dataset[train_idx]
-        train_data = min_max_scaler.fit_transform(train_data)
-        train_labels_days = labels_days[train_idx]
-        train_labels_surv = labels_surv[train_idx]
-        train_labels = (train_labels_days, train_labels_surv)
-
-        val_data = dataset[val_idx]
-        val_data = min_max_scaler.transform(val_data)
-        val_labels_days = labels_days[val_idx]
-        val_labels_surv = labels_surv[val_idx]
-        test_data = dataset[test_idx]
-        test_data = min_max_scaler.transform(test_data)
-        test_labels_days = labels_days[test_idx]
-        test_labels_surv = labels_surv[test_idx]
-        val_labels = (val_labels_days, val_labels_surv)
-        print(val_labels)
-
-        callbacks = [tt.callbacks.EarlyStopping()]
-        batch_size = 16
-        epochs = 100
-        val = (val_data, val_labels)
-        log = model.fit(
-            train_data, train_labels, batch_size, epochs, callbacks, True,
-            val_data=val,
-            val_batch_size=batch_size)
-        log.plot()
-        plt.show()
-        # print(model.partial_log_likelihood(*val).mean())
-        train = train_data, train_labels
-        # Compute the evaluation measurements
-        model.compute_baseline_hazards(*train)
-        surv = model.predict_surv_df(test_data)
-        print(surv)
-        ev = EvalSurv(surv, test_labels_days, test_labels_surv)
-        print(ev.concordance_td())
+    censored_index = np.array(censored_index)
+    uncensored_index = np.array(uncensored_index)
     
+    # Each time test on a specific cancer type
+    # total_cancers = ["TCGA-BRCA"]
+    # for i in range(len(total_cancers)):
+    # test_set = [d for t, d in zip(total_cancers, dataset) if t == total_cancers[i]]
+    # train_set = [d for t, d in zip(total_cancers, dataset) if t != total_cancers[i]]
+
+    # Censored split
+    n = len(censored_index)
+    index = np.arange(n)
+    i = n // 5
+    np.random.seed(seed=0)
+    np.random.shuffle(index)
+    if fold < 4:
+        ctest_idx = index[fold * i: fold * i + i]
+        ctrain_idx = index[:fold * i] + index[fold * i + i:]
+    else:
+        ctest_idx = index[fold * i:]
+        ctrain_idx = index[:fold * i]
+    ctrain_n = len(ctrain_idx)
+    cvalid_n = ctrain_n // 10
+    cvalid_idx = ctrain_idx[:cvalid_n]
+    ctrain_idx = ctrain_idx[cvalid_n:]
+    
+
+    # Uncensored split
+    n = len(uncensored_index)
+    index = np.arange(n)
+    i = n // 5
+    np.random.seed(seed=0)
+    np.random.shuffle(index)
+    if fold < 4:
+        utest_idx = index[fold * i: fold * i + i]
+        utrain_idx = index[:fold * i] + index[fold * i + i:]
+    else:
+        utest_idx = index[fold * i:]
+        utrain_idx = index[:fold * i]
+    utrain_n = len(utrain_idx)
+    uvalid_n = utrain_n // 10
+    uvalid_idx = utrain_idx[:uvalid_n]
+    utrain_idx = utrain_idx[uvalid_n:]
+    
+
+    train_idx = np.concatenate(
+        censored_index[ctrain_idx], uncensored_index[utrain_idx])
+    np.random.seed(seed=0)
+    np.random.shuffle(train_idx)
+    valid_idx = np.concatenate(
+        censored_index[cvalid_idx], uncensored_index[uvalid_idx])
+    np.random.seed(seed=0)
+    np.random.shuffle(valid_idx)
+    test_idx = np.concatenate(
+        censored_index[ctest_idx], uncensored_index[utest_idx])
+    np.random.seed(seed=0)
+    np.random.shuffle(test_idx)
+    
+
+    
+    train_data = dataset[train_idx]
+    train_data = min_max_scaler.fit_transform(train_data)
+    train_labels_days = labels_days[train_idx]
+    train_labels_surv = labels_surv[train_idx]
+    train_labels = (train_labels_days, train_labels_surv)
+
+    val_data = dataset[valid_idx]
+    val_data = min_max_scaler.transform(val_data)
+    val_labels_days = labels_days[valid_idx]
+    val_labels_surv = labels_surv[valid_idx]
+    test_data = dataset[test_idx]
+    test_data = min_max_scaler.transform(test_data)
+    test_labels_days = labels_days[test_idx]
+    test_labels_surv = labels_surv[test_idx]
+    val_labels = (val_labels_days, val_labels_surv)
+    print(val_labels)
+
+    callbacks = [tt.callbacks.EarlyStopping()]
+    batch_size = 16
+    epochs = 100
+    val = (val_data, val_labels)
+    log = model.fit(
+        train_data, train_labels, batch_size, epochs, callbacks, True,
+        val_data=val,
+        val_batch_size=batch_size)
+    log.plot()
+    plt.show()
+    # print(model.partial_log_likelihood(*val).mean())
+    train = train_data, train_labels
+    # Compute the evaluation measurements
+    model.compute_baseline_hazards(*train)
+    surv = model.predict_surv_df(test_data)
+    print(surv)
+    ev = EvalSurv(surv, test_labels_days, test_labels_surv)
+    print(ev.concordance_td())
+
 #         for t in test_dataset:
 #             predicted = model.predict_surv_df(t[x])
 #             c_index = EvalSurv(predicted, t[y],t[event]).concordance_td()
