@@ -14,6 +14,6 @@
 
 - `top-novel.tsv` - The top 1 ranked genes over all the patients across all the cancer types which are not known driver genes or prognostic markers.
 
-- `sorted/` - Genes that are ranked significantly higher by our model's graph attention mechanism across all samples within each cohort/cancer type than expected under a uniform random distribution; reported their p-value, effect size, Holm–Bonferroni correction and Benjamini-Hochberg correction sorted by the effect size.
+- `significant_genes_per_cohort.tgz` - Genes that are ranked significantly higher by our model's graph attention mechanism across all samples within each cohort/cancer type than expected under a uniform random distribution; reported their p-value, effect size, Holm–Bonferroni correction and Benjamini-Hochberg correction sorted by the effect size.
 
-- `filtered/` - Same list of genes in `sorted/` filtered by p<0.2 (Benjamini-Hochberg correction) and sorted by the effect size.
+- `significant_genes_per_cohort_filtered.tgz` - Same list of genes in `significant_genes_per_cohort.tgz` filtered by p<0.2 (Benjamini-Hochberg correction) and sorted by the effect size.
