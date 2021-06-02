@@ -22,7 +22,7 @@ Our tool takes as input data derived from individual sample, in particular the a
 
 ## Running
 
-* Download all the files in [data.tar.gz](https://github.com/bio-ontology-research-group/DeepMOCCA/raw/master/data.tar.gz) and place them into data folder
+* Download all the files in [data.tgz](https://github.com/bio-ontology-research-group/DeepMOCCA/raw/master/data.tar.gz) and place them into data folder
 * `deepmocca -dr <path_to_data_folder> -if <input_filename> -ct <cancer_type> -ap <anatomical_location>`
 * Run `deepmocca --help` to display a description for the parameters:
 ```
