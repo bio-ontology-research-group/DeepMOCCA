@@ -274,9 +274,9 @@ def print_results(dataset, results, out_file, in_file):
     file_name = os.path.splitext(in_file)[0] + '_' + out_file
     features = features.data.cpu().numpy()
     with open(file_name, 'w') as f:
-        f.write(os.path.splitext(in_file)[0] + '\t')
-        f.write(str(prediction) + '\t')
-        f.write(str(features) + '\n')
+        f.write('\n' + os.path.splitext(in_file)[0] + '\t')
+        prediction.to_string(f)
+        f.write('\t' + str(features))
 
     print(f'***DONE***\n***The results have been written to {file_name}***')
     
