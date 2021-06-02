@@ -138,7 +138,7 @@ Options:
 The model will output:
 - A tab separated file has the same name as input file with **_results** extension which contains:
     * Sample_ID
-    * Predicted survival score for a sample, for the selected cancer type and anatomical part
+    * Predicted survival estimates for a sample, for the selected cancer type and anatomical part
     * A vector representation for the sample based on the internal representation of the model
  
 ## Scripts
