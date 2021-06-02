@@ -154,7 +154,7 @@ The model will output:
 We have some [results](https://github.com/bio-ontology-research-group/DeepMOCCA/tree/master/results) pre-generated:
 
 - `patients_representations.txt` - The representation of features for each patient generated after the 2nd `Conv2` layer.
-- `Top_10_ranked_genes_all_samples.tar.gz` - The top 10 ranked genes for each patient genrated from the attention mechanism which specifiy wheather a gene is:
+- `Top_10_ranked_genes_over_all_samples.tgz` - The top 10 ranked genes for each patient genrated from the attention mechanism which specifiy wheather a gene is:
   * `Driver in the same cancer` -> `0` if yes and `1` if no.
   * `Driver in other cancer` -> `0` if yes and `1` if no.
   * `Prognostic in the same cancer` -> `0` if yes and `1` if no.
