@@ -16,16 +16,16 @@ echo "Job ID=$SLURM_JOB_ID,  Running task:$SLURM_ARRAY_TASK_ID"
 # ......
 # 560:file_name560.vcf
 
-values=$(grep "^${SLURM_ARRAY_TASK_ID}:" /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output/list.txt)
+values=$(grep "^${SLURM_ARRAY_TASK_ID}:" /cancer_types/TCGA-HNSC/vcf/output/list.txt)
 echo $values
 filename=$(echo $values | cut -f 2 -d:)
 echo $filename
 
 # Select the two columns that include ENSG and pathogenicity score
 
-awk -F'\t' '{ print $56,$24 }' /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output/$filename > /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output/"$filename".ta
-python process.py /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output/"$filename".ta
+awk -F'\t' '{ print $56,$24 }' /cancer_types/TCGA-HNSC/vcf/output/$filename > /cancer_types/TCGA-HNSC/vcf/output/"$filename".ta
+python process.py /cancer_types/TCGA-HNSC/vcf/output/"$filename".ta
 
-sed 's/ /\t/g' /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output/"$filename".ta.out > /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output/"$filename".re
+sed 's/ /\t/g' /cancer_types/TCGA-HNSC/vcf/output/"$filename".ta.out > /cancer_types/TCGA-HNSC/vcf/output/"$filename".re
 
-awk -F'\t' '{ print $1,$3 }' /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output/"$filename".re > /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output/"$filename".dat
+awk -F'\t' '{ print $1,$3 }' /cancer_types/TCGA-HNSC/vcf/output/"$filename".re > /cancer_types/TCGA-HNSC/vcf/output/"$filename".dat

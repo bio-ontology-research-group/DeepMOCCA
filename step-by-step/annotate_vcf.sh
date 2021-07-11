@@ -6,13 +6,13 @@
 #SBATCH --mail-type=END,FAIL # notifications for job done & fail
 #SBATCH --mail-user=sara.althubaiti@kaust.edu.sa
 #SBATCH --job-name=Annotategene
-#SBATCH --output=/encrypted/e3008/Sara/HNSC.log
+#SBATCH --output=HNSC.log
 
 # the path to input/samples folder
-path_to_vcf='/encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf'
+path_to_vcf='/cancer_types/TCGA-HNSC/vcf'
 mkdir /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output
 # the path to Results folder
-path_to_output='/encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output'
+path_to_output='/cancer_types/TCGA-HNSC/vcf/output'
 
 # the path to annovar folder
 path_to_annovar='/encrypted/e3000/gatkwork/annovar'
