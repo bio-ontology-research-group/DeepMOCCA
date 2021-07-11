@@ -42,7 +42,7 @@
 
 ## Usage:
 
-To run the training model `deepmocca_training.py`, the user need to provide (as already provided in `data_folder/`):
+To run the training model `deepmocca_training.ipynb`, the user need to provide (as already provided in `data_folder/`):
 
 - `seen.pkl`: The protein nodes.
 
