@@ -1,4 +1,4 @@
-# Deep Multi Omics CanCer Analysis (DeepMOCCA) - User Guide on Training the Model
+# Instructions on training DeepMOCCA using TCGA data
 
 ## Installation requirements
 
@@ -12,17 +12,17 @@
 
 * Download the folder `data_folder/` which includes all intermediate needed files for mappings.
 
-* All multi-omics data for the 33 cancer types (i.e. gene expression, DNA methylation, copy number variation (CNV), single nucleotide variation (SNV) and clinical data) except for differentional gene expression and differentional DNA methylation have been downloded from [The Cancer Genome Atlas (TCGA)](http://cancergenome.nih.gov) via their [Data Transfer Tool Client](https://gdc.cancer.gov/access-data/gdc-data-transfer-tool)
+* All multi-omics data for the 33 cancer types (i.e. gene expression, DNA methylation, copy number variation (CNV), single nucleotide variation (SNV) and clinical data) except for differentional gene expression and differentional DNA methylation have been downloded from [The Cancer Genome Atlas (TCGA)](http://cancergenome.nih.gov) via their [Data Transfer Tool Client](https://gdc.cancer.gov/access-data/gdc-data-transfer-tool). Approved access to individual-level data is required to train the full DeepMOCCA model.
 
 * Create a folder `cancer_types/` and sub-folders for each cancer type `TCGA-CANCERTYPE/` that includes all related sub-sub-folders omics data.
 
 ### Gene Expression
 
-- Run `preprocess_gene_expression.ipynb` to normlize gene expression data (i.e column, row and matrix -based normlization).
+- Run `preprocess_gene_expression.ipynb` to normlize gene expression data (i.e., column, row and matrix-based normalization).
 
 ### Differential Gene Expression
 
-- We used `TCGAanalyze_DEA` function in [TCGAbiolinks](/bioc/vignettes/TCGAbiolinks/inst/doc/analysis.html#TCGAanalyze_DEA__TCGAanalyze_LevelTab:_Differential_expression_analysis_(DEA)) to calculate the differential expression value of each gene for all patients as shown in `process_diffexp.r`
+- We used the `TCGAanalyze_DEA` function in [TCGAbiolinks](/bioc/vignettes/TCGAbiolinks/inst/doc/analysis.html#TCGAanalyze_DEA__TCGAanalyze_LevelTab:_Differential_expression_analysis_(DEA)) to calculate the differential expression value of each gene for all patients as shown in `process_diffexp.r`
 
 ###  DNA Methylation
 
