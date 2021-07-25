@@ -1,12 +1,12 @@
 # DeepMOCCA - Deep Multi Omics CanCer Analysis
 
-DeepMOCCA is a method to predict survival time in individual cancer samples. DeepMOCCA also learns representations of the multi-scale activities and interactions within a cell from multi-omics data associated with these samples.
+DeepMOCCA is a method to predict survival in individual cancer samples. DeepMOCCA also learns representations of the multi-scale activities and interactions within a cell from multi-omics data associated with these samples.
 
-Our tool takes as input data derived from individual sample, in particular the absolute gene expression, differential expression, absolute methylation, differential methylation, type of the copy number variants, and pathogenicity scores for the set of germline and somatic variants; it also has as input the cancer type and anatomical location of the tumor. We use this information to determine the cell type of origin.
+Our tool takes as input data derived from individual sample, in particular the absolute gene expression, differential expression, absolute methylation, differential methylation, type of the copy number variants, and pathogenicity scores for the set of germline and somatic variants; it also has as input the cancer type and anatomical location of the tumor.
 
 ## Datasets
 
-* All multi-omics data for the 33 cancer types (i.e. gene expression, DNA methylation, copy number variation (CNV), single nucleotide variation (SNV) and clinical data) have been downloaded from the [The Cancer Genome Atlas (TCGA)](http://cancergenome.nih.gov) via their [Data Transfer Tool Client](https://gdc.cancer.gov/access-data/gdc-data-transfer-tool). Approval is required to access individual level data.
+* All multi-omics data for the 33 cancer types (i.e. gene expression, DNA methylation, copy number variation (CNV), single nucleotide variation (SNV) and clinical data) for training and testing the model have been downloaded from [The Cancer Genome Atlas (TCGA)](http://cancergenome.nih.gov) via their [Data Transfer Tool Client](https://gdc.cancer.gov/access-data/gdc-data-transfer-tool). Approval is required to access individual level data.
 
 * The protein-protein interactions network is from [STRING](https://string-db.org/cgi/download.pl?sessionId=VKCYtvc7YJch&species_text=Homo+sapiens).
 
@@ -140,6 +140,10 @@ The model will output:
     * Sample_ID
     * Predicted survival estimates for a sample, for the selected cancer type and anatomical part
     * A vector representation for the sample based on the internal representation of the model
+ 
+## Training the model
+
+We provide detailed instructions on how to train DeepMOCCA [here](https://github.com/bio-ontology-research-group/DeepMOCCA/tree/master/step-by-step).
  
 ## Scripts
 
