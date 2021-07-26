@@ -1,21 +1,13 @@
 #!/bin/bash 
 
-#SBATCH --mem 80Gb # memory pool for all cores
-#SBATCH --time 24:00:00 # time, specify max time allocation
-#SBATCH --gres=gpu
-#SBATCH --mail-type=END,FAIL # notifications for job done & fail
-#SBATCH --mail-user=sara.althubaiti@kaust.edu.sa
-#SBATCH --job-name=Annotategene
-#SBATCH --output=HNSC.log
-
 # the path to input/samples folder
 path_to_vcf='/cancer_types/TCGA-HNSC/vcf'
-mkdir /encrypted/e3008/Sara/cancer_types/TCGA-HNSC/vcf/output
+mkdir /cancer_types/TCGA-HNSC/vcf/output
 # the path to Results folder
 path_to_output='/cancer_types/TCGA-HNSC/vcf/output'
 
 # the path to annovar folder
-path_to_annovar='/encrypted/e3000/gatkwork/annovar'
+path_to_annovar='/annovar'
 
 for entry in $path_to_vcf/*.vcf.gz
 do
