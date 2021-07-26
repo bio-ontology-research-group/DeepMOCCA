@@ -14,7 +14,48 @@
 
 * All multi-omics data for the 33 cancer types (i.e. gene expression, DNA methylation, copy number variation (CNV), single nucleotide variation (SNV) and clinical data) except for differentional gene expression and differentional DNA methylation have been downloded from [The Cancer Genome Atlas (TCGA)](http://cancergenome.nih.gov) via their [Data Transfer Tool Client](https://gdc.cancer.gov/access-data/gdc-data-transfer-tool). Approved access to individual-level data is required to train the full DeepMOCCA model.
 
-* Create a folder `cancer_types/` and sub-folders for each cancer type `TCGA-CANCERTYPE/` that includes all related sub-sub-folders omics data.
+* Create a folder `cancer_types/` and sub-folders for each cancer type `TCGA-CANCERTYPE/` that includes all related sub-sub-folders omics data:
+
+```
+cancer_types  
+│
+└───TCGA-ACC
+│   │
+│   └───exp
+│       │   686fb7ee-bdd2-4c41-ab25-c0d8b0ccc049.htseq.gz
+│       │   dcf26935-b9a9-40fc-a6f0-7e0ef4b7228a.htseq.gz
+│       │   ...
+│   │
+│   └───exp_diff
+│       │   da33344b-b0d8-4504-bf2c-95aed9bf607a.txt.gz
+│       │   df34297d-30aa-484d-8d21-4c1223716469.txt.gz
+│       │   ...
+│   │
+│   └─── methyl
+│       │   jhu-usc.edu_ACC.HumanMethylation450.1.lvl-3.TCGA-PK-A5HB-01A-11D-A29J-05.gdc_hg38.txt
+│       │   jhu-usc.edu_ACC.HumanMethylation450.1.lvl-3.TCGA-OR-A5LM-01A-11D-A29J-05.gdc_hg38.txt
+│       │   ...
+│   │
+│   └─── methyl_diff
+│       │   jhu-usc.edu_ACC.HumanMethylation450.1.lvl-3.TCGA-OR-A5J3-01A-11D-A29J-05.gdc_hg38.txt
+│       │   jhu-usc.edu_ACC.HumanMethylation450.1.lvl-3.TCGA-OR-A5J7-01A-11D-A29J-05.gdc_hg38.txt
+│       │   ...
+│   │
+│   └─── vcf
+│       │   88d42bb6-b07d-4f41-b512-cdf2e7650776.vep.vcf.gz
+│       │   63dece65-5f99-48db-bbf8-84eb652f3167.vep.vcf.gz
+│       │   ...
+│   │
+│   └─── cnv
+│       │   ACC.focal_score_by_genes.txt
+│   │
+│   └─── clinical
+│       │   nationwidechildrens.org_clinical.TCGA-OR-A5KP.xml
+│       │   nationwidechildrens.org_clinical.TCGA-OR-A5JT.xml
+│       │   ...
+│
+└───TCGA-...
+```
 
 ### Gene Expression
 
