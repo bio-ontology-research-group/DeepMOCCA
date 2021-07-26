@@ -18,7 +18,9 @@ Our tool takes as input data derived from individual sample, in particular the a
 
 ## Installation
 
-`pip install deepmocca` should work in most cases.
+```
+pip install deepmocca
+```
 
 ## Running
 
