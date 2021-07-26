@@ -6,7 +6,11 @@
  ```
 	pip install -r requirements.txt
  ```
- - `torch` and `torch geometric cuda` need to have the same version, we suggest to follow the instructions [Here](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
+- `torch` and `torch geometric cuda` need to have the same version, we suggest to follow the instructions [Here](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
+
+- R (version 4.1.0) and `TCGAbiolinks` package (version 2.20.0)
+
+- ANNOVAR (2019Oct24) can be downloaded from [here](https://www.openbioinformatics.org/annovar/annovar_download_form.php) (registration required).
  
 ## Prepare the multi-omics data
 
