@@ -157,7 +157,7 @@ We provide detailed instructions on how to train DeepMOCCA [here](https://github
 
 ## Results
 
-We have some [results](https://github.com/bio-ontology-research-group/DeepMOCCA/tree/master/results) pre-generated:
+We have generated some [results](https://github.com/bio-ontology-research-group/DeepMOCCA/tree/master/results):
 
 - `patients_representations.txt` - The representation of features for each patient generated after the 2nd `Conv2` layer.
 - `Top_10_ranked_genes_over_all_samples.tgz` - The top 10 ranked genes for each patient genrated from the attention mechanism which specify whether a gene is:
@@ -165,6 +165,8 @@ We have some [results](https://github.com/bio-ontology-research-group/DeepMOCCA/
   * `Driver in other cancer` -> `0` if yes and `1` if no.
   * `Prognostic in the same cancer` -> `0` if yes and `1` if no.
   * `Prognostic in other cancer` -> `0` if yes and `1` if no.
+
+We have provided the 5 cross-validation splits (patients IDs) for each cancer type in `cross_val_splits.txt` that used to evaluate and compare against the [Cheerla et al.](https://academic.oup.com/bioinformatics/article/35/14/i446/5529139) model.
       
 ## Final notes
 
