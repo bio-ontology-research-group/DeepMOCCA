@@ -10,6 +10,8 @@ Our tool takes as input data derived from individual sample, in particular the a
 
 * The protein-protein interactions network is from [STRING](https://string-db.org/cgi/download.pl?sessionId=VKCYtvc7YJch&species_text=Homo+sapiens).
 
+* To reproduce the results for DeepMOCCA, follow the instructions [here](https://github.com/bio-ontology-research-group/DeepMOCCA/tree/master/step-by-step). 
+
 ## Dependencies
 
 * To install python dependencies run: `pip install -r requirements.txt`
