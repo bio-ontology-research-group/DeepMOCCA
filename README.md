@@ -16,7 +16,7 @@ Our tool takes as input data derived from individual sample, in particular the a
 
 * To install python dependencies run: `pip install -r requirements.txt`
 
-* Note: the `torch` and `torch geometric cuda` need to have the same version, we suggest to follow the instructions [here](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
+* Note: the `torch` and `torch geometric cuda` need to have the same version, we suggest to follow the instructions based on Conda smooth installation [here](https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html)
 
 ## Installation
 
