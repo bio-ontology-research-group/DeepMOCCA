@@ -217,10 +217,11 @@ def get_data(expname,diffexpname,diffmethyname,cnvname,vcfname,output, seen, dic
 
 # This value should be changed for train each cancer type (0--32)
 # cancer_type = 0
-can_types = ["TCGA-BRCA","TCGA-ACC","TCGA-BLCA","TCGA-CESC","TCGA-CHOL","TCGA-COAD","TCGA-DLBC","TCGA-ESCA","TCGA-GBM","TCGA-HNSC","TCGA-KICH","TCGA-KIRC","TCGA-KIRP","TCGA-LAML","TCGA-LGG","TCGA-LIHC","TCGA-LUAD","TCGA-LUSC","TCGA-MESO","TCGA-OV","TCGA-PAAD","TCGA-PCPG","TCGA-PRAD","TCGA-READ","TCGA-SARC","TCGA-SKCM","TCGA-STAD","TCGA-TGCT","TCGA-THCA","TCGA-THYM","TCGA-UCEC","TCGA-UCS","TCGA-UVM"]
+# can_types = ["TCGA-BRCA","TCGA-ACC","TCGA-BLCA","TCGA-CESC","TCGA-CHOL","TCGA-COAD","TCGA-DLBC","TCGA-ESCA","TCGA-GBM","TCGA-HNSC","TCGA-KICH","TCGA-KIRC","TCGA-KIRP","TCGA-LAML","TCGA-LGG","TCGA-LIHC","TCGA-LUAD","TCGA-LUSC","TCGA-MESO","TCGA-OV","TCGA-PAAD","TCGA-PCPG","TCGA-PRAD","TCGA-READ","TCGA-SARC","TCGA-SKCM","TCGA-STAD","TCGA-TGCT","TCGA-THCA","TCGA-THYM","TCGA-UCEC","TCGA-UCS","TCGA-UVM"]
+can_types = ["TCGA-BRCA",]
 # anatomical_location = 0
 # For each cancer type this needs to be changed
-data_root = 'data_root/'
+data_root = 'data_folder/'
 # def main(cancer_type, anatomical_location):
 
 # Import the RDF graph for PPI network
@@ -234,7 +235,8 @@ ei = pickle.load(f)
 f.close()
 
 global device
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cpu')
 
 # cancer_type_vector = np.zeros((33,), dtype=np.float32)
 # cancer_type_vector[cancer_type] = 1
@@ -344,9 +346,6 @@ for ii in range(len(can_types)):
     censored_index = np.array(censored_index)
     uncensored_index = np.array(uncensored_index)
 
-    # names = ["TCGA-ACC","TCGA-BLCA","TCGA-BRCA","TCGA-CESC","TCGA-CHOL","TCGA-COAD","TCGA-DLBC","TCGA-ESCA","TCGA-GBM","TCGA-HNSC","TCGA-KICH","TCGA-KIRC","TCGA-KIRP","TCGA-LAML","TCGA-LGG","TCGA-LIHC","TCGA-LUAD","TCGA-LUSC","TCGA-MESO","TCGA-OV","TCGA-PAAD","TCGA-PCPG","TCGA-PRAD","TCGA-READ","TCGA-SARC","TCGA-SKCM","TCGA-STAD","TCGA-TGCT","TCGA-THCA","TCGA-THYM","TCGA-UCEC","TCGA-UCS","TCGA-UVM"]
-
-    # for cancer_type in range(len(names)):
     ev_ = []
     splits = 5
     best_cindex = 0
