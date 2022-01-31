@@ -229,9 +229,9 @@ edge_index = torch.LongTensor(edge_index).to(device)
 # In[11]:
 
 
-def get_adj(nb=1):
+def get_adj(nb):
     adj=[[0 for i in range(len(proteins))] for i in range(len(proteins))]
-    for i in range(17185):
+    for i in range(len(proteins)):
         adj[i][i] = 1
     for index, row in interactions_df.iterrows():
         adj[row['protein1']][row['protein2']] = 1
@@ -240,14 +240,14 @@ def get_adj(nb=1):
         return adj
     else:
         return adj.repeat(nb,nb)
-num = 1
+num = 2
 adj=get_adj(num)
 
 
 # In[12]:
 
 
-print(adj.shape)
+# print(adj.shape)
 
 
 # ## Model class
@@ -260,15 +260,14 @@ class MyNet(nn.Module):
         super(MyNet, self).__init__()
         self.num_nodes = num_nodes
         self.edge_index = edge_index
-#         self.conv1 = GraphConv(6, 6)
-#         self.pool1 = SAGPooling(6, ratio=0.1, GNN=GraphConv)
-        self.fc1 = nn.Linear(17185, 17185)
-        self.bn1 = nn.BatchNorm1d(17185)
+
+        self.fc1 = nn.Linear(17185*2, 17185*2)
+        self.bn1 = nn.BatchNorm1d(17185*2)
         self.dropout1 = nn.Dropout(0.1)
         self.fc2 = nn.Linear(1024, 512)
         self.bn2 = nn.BatchNorm1d(512)
         self.dropout2 = nn.Dropout(0.1)
-        self.fc3 = nn.Linear(17185, 1)
+        self.fc3 = nn.Linear(17185*2, 1)
         self.bn3 = nn.BatchNorm1d(1)
         self.dropout3 = nn.Dropout(0.1)
         self.sigmoid = nn.Sigmoid()
@@ -277,7 +276,7 @@ class MyNet(nn.Module):
 #         j = torch.cuda.memory_stats('cuda:0')
 #         print(j['allocated_bytes.all.current'],len(self.batches))
         batch_size = data.shape[0]
-        x = data[:, :self.num_nodes * 1]
+        x = data[:, :self.num_nodes * 2]
 #         x = x.reshape(batch_size, self.num_nodes, 6)
         batch=''
         if True:
@@ -471,7 +470,7 @@ norm_ = globals()[sys.argv[4]]
 for i, cancer_type in enumerate(cancer_types):
     # Create a new model for each cancer type
 
-    df = pd.read_pickle(f'preprocessing_codes/{cancer_type}_exp.pkl')
+    df = pd.read_pickle(f'preprocessing_codes/{cancer_type}_mix.pkl')
     print(df)
 
     dataset = np.stack(df['features'].values).reshape(len(df), -1)
@@ -526,7 +525,7 @@ for i, cancer_type in enumerate(cancer_types):
     splits = 5
     best_cindex = 0
 
-    num_features = 1
+    num_features = 2
     num_nodes = 17185
 
     for fold in range(splits):
